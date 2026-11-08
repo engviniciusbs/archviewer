@@ -6,6 +6,7 @@ import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import { useGraphStore, useGraphStoreApi } from '../store/graph-store';
 import { renderable } from '../store/selectors';
+import { stopLayout, syncThenLayout } from './layout';
 import { PositionCache } from './positions';
 import { nodeKey, syncGraph } from './sync';
 import { canvasToRgb, readTheme, type GraphTheme } from './theme';
@@ -33,32 +34,15 @@ function shortDuration(): number {
   return Number.isFinite(ms) ? ms : 220;
 }
 
-/** Para e destrói o layout atual; só uma instância existe por vez. */
-function stopLayout(e: Engine, capture: boolean): void {
-  if (e.timer) clearTimeout(e.timer);
-  e.timer = null;
-  const layout = e.layout;
-  e.layout = null;
-  if (!layout) return;
-  layout.stop();
-  layout.kill();
-  if (capture) e.cache.capture(e.graph);
+function captureOf(e: Engine) {
+  return () => e.cache.capture(e.graph);
 }
 
-function runLayout(e: Engine, durationMs: number, pinned: Set<string>): void {
-  stopLayout(e, true);
+function createLayout(e: Engine, pinned: Set<string>): FA2Layout | null {
   const { graph } = e;
-  if (graph.order < 2) return;
+  if (graph.order < 2) return null;
   graph.forEachNode((key) => graph.setNodeAttribute(key, 'fixed', pinned.has(key)));
-  const layout = new FA2Layout(graph, { settings: forceAtlas2.inferSettings(graph) });
-  e.layout = layout;
-  layout.start();
-  e.timer = setTimeout(() => {
-    if (e.layout !== layout) return;
-    stopLayout(e, true);
-    graph.forEachNode((key) => graph.setNodeAttribute(key, 'fixed', false));
-    e.sigma.refresh();
-  }, durationMs);
+  return new FA2Layout(graph, { settings: forceAtlas2.inferSettings(graph) });
 }
 
 export function GraphCanvas() {
@@ -127,7 +111,7 @@ export function GraphCanvas() {
     return () => {
       const e = engineRef.current;
       engineRef.current = null;
-      if (e) stopLayout(e, false);
+      if (e) stopLayout(e, () => undefined);
       sigma.kill();
     };
   }, [storeApi]);
@@ -135,12 +119,24 @@ export function GraphCanvas() {
   useEffect(() => {
     const e = engineRef.current;
     if (!e) return;
-    const first = e.graph.order === 0;
-    const existing = new Set(e.graph.nodes());
-    const { added } = syncGraph(e.graph, renderable(vgraph, filters), e.cache, e.theme);
-    if (added.length > 0) {
-      runLayout(e, first ? INITIAL_LAYOUT_MS : INCREMENTAL_LAYOUT_MS, first ? new Set() : existing);
-    }
+    syncThenLayout(e, {
+      capture: captureOf(e),
+      mutate: () => {
+        const first = e.graph.order === 0;
+        const existing = new Set(e.graph.nodes());
+        const { added } = syncGraph(e.graph, renderable(vgraph, filters), e.cache, e.theme);
+        return {
+          added: added.length,
+          durationMs: first ? INITIAL_LAYOUT_MS : INCREMENTAL_LAYOUT_MS,
+          pinned: first ? new Set<string>() : existing,
+        };
+      },
+      create: (pinned) => createLayout(e, pinned),
+      onSettled: () => {
+        e.graph.forEachNode((key) => e.graph.setNodeAttribute(key, 'fixed', false));
+        e.sigma.refresh();
+      },
+    });
     e.sigma.refresh();
   }, [vgraph, filters, storeApi]);
 
