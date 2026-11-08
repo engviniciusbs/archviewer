@@ -25,17 +25,50 @@ pub fn dirs_of<'a>(paths: impl Iterator<Item = &'a str>) -> BTreeSet<String> {
     out
 }
 
-fn unquote(s: &str) -> &str {
-    let s = s.trim();
+/// A YAML scalar item: a quoted string (anything after the closing quote,
+/// like a ` # comment`, is dropped) or a bare word without its ` # comment`.
+fn scalar(item: &str) -> &str {
+    let item = item.trim();
     for q in ['\'', '"'] {
-        if s.len() >= 2 && s.starts_with(q) && s.ends_with(q) {
-            return &s[1..s.len() - 1];
+        if let Some(rest) = item.strip_prefix(q) {
+            return rest.find(q).map_or(rest, |i| &rest[..i]);
         }
     }
-    s
+    item.split(" #").next().unwrap_or(item).trim()
 }
 
-/// Items under the top-level `packages:` key, parsed line by line.
+/// Items of a single-line flow sequence (`['a/*', "b/*"]`); commas inside
+/// quotes do not split.
+fn flow_items(flow: &str) -> Vec<String> {
+    let inner = flow.trim_start_matches('[');
+    let mut items = Vec::new();
+    let (mut cur, mut quote) = (String::new(), None);
+    for c in inner.chars() {
+        match (quote, c) {
+            (None, ']') => break,
+            (None, ',') => items.push(std::mem::take(&mut cur)),
+            (None, '\'' | '"') => {
+                quote = Some(c);
+                cur.push(c);
+            }
+            (Some(q), _) if q == c => {
+                quote = None;
+                cur.push(c);
+            }
+            _ => cur.push(c),
+        }
+    }
+    items.push(cur);
+    items
+        .iter()
+        .map(|i| scalar(i))
+        .filter(|i| !i.is_empty())
+        .map(String::from)
+        .collect()
+}
+
+/// Items under the top-level `packages:` key (block or single-line flow
+/// sequence), parsed line by line.
 fn pnpm_globs(yaml: &str) -> Vec<String> {
     let mut out = Vec::new();
     let mut inside = false;
@@ -46,19 +79,17 @@ fn pnpm_globs(yaml: &str) -> Vec<String> {
             continue;
         }
         if !line.starts_with(char::is_whitespace) && !trimmed.starts_with('-') {
-            inside = trimmed.strip_prefix("packages:").is_some();
+            let rest = trimmed.strip_prefix("packages:");
+            inside = rest.is_some();
+            if let Some(flow) = rest.map(str::trim_start).filter(|r| r.starts_with('[')) {
+                out.extend(flow_items(flow));
+                inside = false;
+            }
             continue;
         }
         if inside {
             if let Some(item) = trimmed.strip_prefix('-') {
-                // Drop a trailing ` # comment` for unquoted items.
-                let item = item.trim();
-                let item = if item.starts_with(['\'', '"']) {
-                    item
-                } else {
-                    item.split(" #").next().unwrap_or(item)
-                };
-                let item = unquote(item);
+                let item = scalar(item);
                 if !item.is_empty() {
                     out.push(item.to_string());
                 }
@@ -83,8 +114,17 @@ fn package_json_globs(value: &serde_json::Value) -> Vec<String> {
 }
 
 fn clean_glob(g: &str) -> String {
-    let g = g.trim().trim_start_matches("./").trim_end_matches('/');
-    g.to_string()
+    let g = g.trim();
+    let (neg, g) = match g.strip_prefix('!') {
+        Some(rest) => ("!", rest),
+        None => ("", g),
+    };
+    format!("{neg}{}", g.trim_start_matches("./").trim_end_matches('/'))
+}
+
+/// JSON value of a `package.json`, tolerating a UTF-8 BOM.
+fn parse_json(content: &str) -> Option<serde_json::Value> {
+    serde_json::from_str(content.trim_start_matches('\u{feff}')).ok()
 }
 
 /// Builds a set from the valid globs; each invalid one adds a warning.
@@ -111,9 +151,9 @@ pub fn detect_workspaces(
         globs.extend(pnpm_globs(yaml));
     }
     if let Some(pkg) = configs.get("package.json") {
-        match serde_json::from_str::<serde_json::Value>(pkg) {
-            Ok(v) => globs.extend(package_json_globs(&v)),
-            Err(_) => warnings.push("package.json inválido: package.json".to_string()),
+        match parse_json(pkg) {
+            Some(v) => globs.extend(package_json_globs(&v)),
+            None => warnings.push("package.json inválido: package.json".to_string()),
         }
     }
     let (neg, pos): (Vec<_>, Vec<_>) = globs
@@ -133,8 +173,8 @@ pub fn detect_workspaces(
         let Some(content) = configs.get(&pj) else {
             continue;
         };
-        match serde_json::from_str::<serde_json::Value>(content) {
-            Ok(v) => {
+        match parse_json(content) {
+            Some(v) => {
                 if let Some(name) = v.get("name").and_then(|n| n.as_str()) {
                     packages.push(WorkspacePackage {
                         name: name.to_string(),
@@ -142,7 +182,7 @@ pub fn detect_workspaces(
                     });
                 }
             }
-            Err(_) => warnings.push(format!("package.json inválido: {pj}")),
+            None => warnings.push(format!("package.json inválido: {pj}")),
         }
     }
     (packages, warnings)
@@ -222,6 +262,60 @@ mod tests {
     }
 
     #[test]
+    fn pnpm_yaml_flow_style() {
+        assert_eq!(
+            pnpm_globs("packages: ['a/*', \"b/*\", c/*] # c\nother: [d/*]\n"),
+            vec!["a/*", "b/*", "c/*"]
+        );
+        assert_eq!(pnpm_globs("packages: []\n"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn pnpm_yaml_trailing_comments() {
+        let yaml = "packages:\n  - 'a/*' # quoted\n  - \"b/*\"  # dq\n  - c/* # bare\n";
+        assert_eq!(pnpm_globs(yaml), vec!["a/*", "b/*", "c/*"]);
+    }
+
+    #[test]
+    fn negated_glob_with_dot_slash() {
+        let (pkgs, warns) = run(
+            &[
+                (
+                    "pnpm-workspace.yaml",
+                    "packages:\n  - './libs/*'\n  - '!./libs/old'\n",
+                ),
+                ("libs/new/package.json", r#"{"name":"new"}"#),
+                ("libs/old/package.json", r#"{"name":"old"}"#),
+            ],
+            &["libs", "libs/new", "libs/old"],
+        );
+        assert_eq!(
+            pkgs.iter().map(|p| p.name.as_str()).collect::<Vec<_>>(),
+            vec!["new"]
+        );
+        assert!(warns.is_empty(), "{warns:?}");
+    }
+
+    #[test]
+    fn package_json_with_bom() {
+        let (pkgs, warns) = run(
+            &[
+                ("package.json", "\u{feff}{\"workspaces\":[\"libs/*\"]}"),
+                ("libs/a/package.json", "\u{feff}{\"name\":\"a\"}"),
+            ],
+            &["libs", "libs/a"],
+        );
+        assert_eq!(
+            pkgs,
+            vec![WorkspacePackage {
+                name: "a".into(),
+                dir: "libs/a".into()
+            }]
+        );
+        assert!(warns.is_empty(), "{warns:?}");
+    }
+
+    #[test]
     fn dirs_of_collects_ancestors() {
         let d = dirs_of(["a/b/c.ts", "x.ts", "a/p.json"].into_iter());
         assert_eq!(d.into_iter().collect::<Vec<_>>(), vec!["a", "a/b"]);
@@ -231,10 +325,7 @@ mod tests {
     fn crlf_pnpm_workspace_yaml_detects_package() {
         let (pkgs, warns) = run(
             &[
-                (
-                    "pnpm-workspace.yaml",
-                    "packages:\r\n  - 'packages/*'\r\n",
-                ),
+                ("pnpm-workspace.yaml", "packages:\r\n  - 'packages/*'\r\n"),
                 ("packages/a/package.json", r#"{"name":"a"}"#),
             ],
             &["packages", "packages/a"],
