@@ -63,3 +63,60 @@ jobs:
         run: pnpm --filter @archviewer/web exec playwright install --with-deps chromium
       - name: Web e2e
         run: pnpm --filter @archviewer/web e2e
+
+      - name: Production build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: pnpm --filter @archviewer/web build
+      - name: Upload web dist
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    # Production: every push to main that passes the core job.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: core
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://archviewer.viniciusbsarmento.com
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.ARCHVIEWER_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ARCHVIEWER_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # The key is pinned server-side to /usr/local/bin/archviewer-receive (deploy/archviewer-receive.sh):
+      # it unpacks the tar into a new release and swaps the `current` symlink.
+      - name: Publish release
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          test -f dist/index.html
+          tar -C dist -cf - . | ssh -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes "archviewer@${DEPLOY_HOST}" "${GITHUB_SHA}"
+
+      - name: Smoke check
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://archviewer.viniciusbsarmento.com/) && [ "$code" = 200 ] && break
+            sleep 5
+          done
+          [ "$code" = 200 ]
+          curl -sf https://archviewer.viniciusbsarmento.com/ | grep -q '<title>ArchViewer</title>'
