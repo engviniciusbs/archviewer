@@ -5,6 +5,9 @@ import type { DirSource } from './source';
 export type IngestSkip = { path: string; reason: 'tooLarge' | 'unreadable' };
 export type ReadProgress = { read: number; total: number };
 
+/** Leituras em voo ao mesmo tempo; os lotes continuam saindo na ordem da varredura. */
+const READ_CONCURRENCY = 12;
+
 export async function readInto(
   src: DirSource,
   files: ScanFile[],
@@ -14,6 +17,7 @@ export async function readInto(
     batchFiles: number;
     batchBytes: number;
     signal?: AbortSignal;
+    concurrency?: number;
     onProgress?: (p: ReadProgress) => void;
   },
 ): Promise<{ accepted: number; skipped: IngestSkip[] }> {
@@ -37,8 +41,26 @@ export async function readInto(
     accepted += (await addFiles(b)).accepted;
   };
 
-  for (const f of files) {
+  // Janela de leituras adiantadas [i, i + limit): nunca rejeitam (falha vira null), então
+  // abortar com leituras em voo não deixa rejeição solta nem dispara addFiles.
+  const limit = Math.max(1, opts.concurrency ?? READ_CONCURRENCY);
+  const reads: (Promise<string | null> | undefined)[] = new Array(total);
+  let started = 0;
+  const startUpTo = (end: number) => {
+    for (; started < Math.min(end, total); started++) {
+      const f = files[started]!;
+      if (f.size > opts.maxFileBytes) continue;
+      reads[started] = src.read(f.path).then(
+        (c) => c,
+        () => null,
+      );
+    }
+  };
+
+  for (let i = 0; i < total; i++) {
     check();
+    startUpTo(i + limit);
+    const f = files[i]!;
     if (f.size > opts.maxFileBytes) {
       skipped.push({ path: f.path, reason: 'tooLarge' });
       processed++;
@@ -52,12 +74,13 @@ export async function readInto(
     ) {
       await flush();
     }
-    try {
-      const content = await src.read(f.path);
+    const content = await reads[i]!;
+    reads[i] = undefined;
+    if (content === null) {
+      skipped.push({ path: f.path, reason: 'unreadable' });
+    } else {
       batch.push({ path: f.path, content });
       batchSize += f.size;
-    } catch {
-      skipped.push({ path: f.path, reason: 'unreadable' });
     }
     processed++;
     progress();

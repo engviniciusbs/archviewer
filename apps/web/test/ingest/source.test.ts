@@ -122,4 +122,14 @@ describe('fromDirectoryHandle', () => {
     await expect(src.read('locked.ts')).rejects.toThrow();
     expect(await src.read('ok.ts')).toBe('abc');
   });
+
+  it('chama getFile em paralelo dentro de um diretório', async () => {
+    const tree: FakeTree = {};
+    for (let i = 0; i < 40; i++) tree[`f${i}.ts`] = { size: i };
+    const track = { inFlight: 0, max: 0 };
+    const entries = await fromDirectoryHandle(fakeHandle('p', tree, track)).list('');
+    expect(entries).toHaveLength(40);
+    expect(entries.find((e) => e.name === 'f7.ts')).toEqual({ name: 'f7.ts', kind: 'file', size: 7 });
+    expect(track.max).toBeGreaterThan(1);
+  });
 });

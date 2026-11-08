@@ -76,6 +76,9 @@ export function fromFileList(files: ArrayLike<File>): DirSource {
   };
 }
 
+/** `getFile()` simultâneos por diretório ao listar. */
+const GET_FILE_CHUNK = 16;
+
 export function fromDirectoryHandle(handle: FileSystemDirectoryHandle): DirSource {
   const dirs = new Map<string, FileSystemDirectoryHandle>([['', handle]]);
 
@@ -102,6 +105,7 @@ export function fromDirectoryHandle(handle: FileSystemDirectoryHandle): DirSourc
     async list(dir) {
       const h = await dirHandle(dir);
       const out: DirEntry[] = [];
+      const files: { name: string; handle: FileSystemFileHandle }[] = [];
       const iter = h as unknown as {
         entries(): AsyncIterable<[string, FileSystemHandle]>;
       };
@@ -110,15 +114,22 @@ export function fromDirectoryHandle(handle: FileSystemDirectoryHandle): DirSourc
           dirs.set(dir ? `${dir}/${name}` : name, entry as FileSystemDirectoryHandle);
           out.push({ name, kind: 'dir', size: 0 });
         } else {
-          // Arquivo travado ou sem permissão: entra com tamanho 0 e a leitura o marca como ilegível.
-          let size = 0;
-          try {
-            size = (await (entry as FileSystemFileHandle).getFile()).size;
-          } catch {
-            // segue com 0
-          }
-          out.push({ name, kind: 'file', size });
+          files.push({ name, handle: entry as FileSystemFileHandle });
         }
+      }
+      // Tamanhos em blocos paralelos. Arquivo travado ou sem permissão entra com tamanho 0
+      // e a leitura o marca como ilegível.
+      for (let i = 0; i < files.length; i += GET_FILE_CHUNK) {
+        const chunk = files.slice(i, i + GET_FILE_CHUNK);
+        const sizes = await Promise.all(
+          chunk.map((f) =>
+            f.handle.getFile().then(
+              (file) => file.size,
+              () => 0,
+            ),
+          ),
+        );
+        chunk.forEach((f, j) => out.push({ name: f.name, kind: 'file', size: sizes[j]! }));
       }
       return out;
     },

@@ -88,4 +88,53 @@ describe('readInto', () => {
     ).rejects.toMatchObject({ name: 'AbortError' });
     expect(add).toHaveBeenCalledTimes(1);
   });
+
+  it('lê em paralelo até o limite e mantém a ordem dos lotes', async () => {
+    const rec = many(60);
+    const src = memorySource('m', rec);
+    const orig = src.read.bind(src);
+    let inFlight = 0;
+    let max = 0;
+    src.read = async (p) => {
+      inFlight++;
+      max = Math.max(max, inFlight);
+      // Tempos variados: leituras terminam fora de ordem.
+      await new Promise((r) => setTimeout(r, (Number(p.slice(1, 5)) * 7) % 5));
+      inFlight--;
+      return orig(p);
+    };
+    const add = okAdd();
+    const seen: ReadProgress[] = [];
+    const r = await readInto(src, toScan(rec), add, {
+      ...base,
+      batchFiles: 25,
+      concurrency: 6,
+      onProgress: (p) => seen.push(p),
+    });
+    expect(max).toBeGreaterThan(1);
+    expect(max).toBeLessThanOrEqual(6);
+    expect(add.mock.calls.flatMap((c) => c[0].map((f) => f.path))).toEqual(Object.keys(rec));
+    expect(add.mock.calls.map((c) => c[0].length)).toEqual([25, 25, 10]);
+    expect(seen.map((p) => p.read)).toEqual(Array.from({ length: 60 }, (_, i) => i + 1));
+    expect(r).toEqual({ accepted: 60, skipped: [] });
+  });
+
+  it('abortar com leituras em voo não gera addFiles nem rejeições soltas', async () => {
+    const rec = many(30);
+    const src = memorySource('m', rec);
+    const orig = src.read.bind(src);
+    const ac = new AbortController();
+    src.read = async (p) => {
+      await new Promise((r) => setTimeout(r, 1));
+      if (p === 'f0003.ts') ac.abort();
+      if (p === 'f0005.ts') throw new Error('boom');
+      return orig(p);
+    };
+    const add = okAdd();
+    await expect(
+      readInto(src, toScan(rec), add, { ...base, concurrency: 8, signal: ac.signal }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(add).not.toHaveBeenCalled();
+  });
 });
