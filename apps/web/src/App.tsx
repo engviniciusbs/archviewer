@@ -2,6 +2,7 @@ import { DetailPanel } from './components/DetailPanel';
 import { EmptyScreen } from './components/EmptyScreen';
 import { ErrorScreen } from './components/ErrorScreen';
 import { Explorer } from './components/Explorer';
+import { GraphErrorBoundary } from './components/GraphErrorBoundary';
 import { LoadingScreen } from './components/LoadingScreen';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
@@ -14,7 +15,9 @@ function Shell() {
       <Toolbar />
       <Explorer />
       <main className="shell__graph" aria-label="Grafo de dependências">
-        <GraphCanvas />
+        <GraphErrorBoundary>
+          <GraphCanvas />
+        </GraphErrorBoundary>
       </main>
       <DetailPanel />
       <StatusBar />

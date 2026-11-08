@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/App';
@@ -6,8 +6,12 @@ import { pickDirectory } from '../../src/ingest/pick';
 import { memorySource } from '../../src/ingest/source';
 import { makeApi, readyStore, renderWith, storeWith } from './helpers';
 
+const canvas = vi.hoisted(() => ({ throws: false }));
 vi.mock('../../src/renderer/GraphCanvas', () => ({
-  GraphCanvas: () => <div data-testid="graph-canvas-stub" />,
+  GraphCanvas: () => {
+    if (canvas.throws) throw new Error('WebGL indisponível');
+    return <div data-testid="graph-canvas-stub" />;
+  },
 }));
 vi.mock('../../src/ingest/pick', () => ({ pickDirectory: vi.fn() }));
 
@@ -15,6 +19,7 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
 });
 afterEach(() => {
+  canvas.throws = false;
   vi.unstubAllGlobals();
   vi.mocked(pickDirectory).mockReset();
 });
@@ -93,5 +98,22 @@ describe('App', () => {
     expect(
       screen.getByText('Seu navegador não tem acesso direto a pastas; usando o seletor de arquivos.'),
     ).toBeInTheDocument();
+  });
+
+  it('se o grafo não consegue iniciar (sem WebGL), mostra o erro com Recarregar e mantém o resto', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
+    canvas.throws = true;
+    const { store } = await readyStore(makeApi());
+    renderWith(store, <App />);
+    const graph = screen.getByRole('main', { name: 'Grafo de dependências' });
+    expect(within(graph).getByRole('alert')).toHaveTextContent(
+      'Seu navegador não conseguiu iniciar o WebGL, necessário para desenhar o grafo.',
+    );
+    const reload = vi.fn();
+    vi.stubGlobal('location', { ...window.location, reload });
+    await userEvent.click(within(graph).getByRole('button', { name: 'Recarregar' }));
+    expect(reload).toHaveBeenCalled();
+    expect(screen.getByRole('tree')).toBeInTheDocument();
+    quiet.mockRestore();
   });
 });

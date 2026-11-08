@@ -809,6 +809,11 @@
   padding: var(--gutter);
   background: var(--color-paper);
 }
+/* Dentro da área do grafo: ocupa o espaço dela, não a viewport. */
+.screen--inline {
+  min-height: 100%;
+  height: 100%;
+}
 .screen__panel {
   display: grid;
   gap: var(--space-md);
