@@ -226,4 +226,28 @@ mod tests {
         let d = dirs_of(["a/b/c.ts", "x.ts", "a/p.json"].into_iter());
         assert_eq!(d.into_iter().collect::<Vec<_>>(), vec!["a", "a/b"]);
     }
+
+    #[test]
+    fn crlf_pnpm_workspace_yaml_detects_package() {
+        let (pkgs, warns) = run(
+            &[
+                (
+                    "pnpm-workspace.yaml",
+                    "packages:
+  - 'packages/*'
+",
+                ),
+                ("packages/a/package.json", r#"{"name":"a"}"#),
+            ],
+            &["packages", "packages/a"],
+        );
+        assert_eq!(
+            pkgs,
+            vec![WorkspacePackage {
+                name: "a".into(),
+                dir: "packages/a".into()
+            }]
+        );
+        assert!(warns.is_empty());
+    }
 }

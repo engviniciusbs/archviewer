@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/archviewer-core"]
+members = ["crates/archviewer-core", "packages/core-wasm"]
 resolver = "2"
 
 [profile.release]

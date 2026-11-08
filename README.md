@@ -28,8 +28,16 @@ ArchViewer lets you select a local JavaScript/TypeScript project folder and inst
 
 - [Node.js](https://nodejs.org/) >= 20
 - [pnpm](https://pnpm.io/) >= 9
-- [Rust](https://rustup.rs/) (for building the Wasm parser)
-- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+- [Rust](https://rustup.rs/) (for building the Wasm core), plus the wasm target and the bindgen CLI:
+
+  ```bash
+  rustup target add wasm32-unknown-unknown
+  cargo install wasm-bindgen-cli --version 0.2.130
+  ```
+
+  The CLI version must match the `wasm-bindgen` version pinned in `Cargo.lock`; `pnpm build:wasm` checks this and prints the install command if it differs.
+
+**Windows note:** building Rust needs a linker toolchain. Either install the MSVC Build Tools, or use the GNU toolchain (`rustup override set stable-x86_64-pc-windows-gnu`) with MinGW-w64 on your `PATH`.
 
 ### Install & Run
 
@@ -60,7 +68,7 @@ pnpm dev
 ```
 archviewer/
 ├── packages/
-│   ├── wasm-parser/     # Rust → WebAssembly (OXC AST parser)
+│   ├── core-wasm/       # wasm-bindgen wrapper around crates/archviewer-core
 │   └── ai-bridge/       # LLM abstraction layer (TypeScript)
 ├── apps/
 │   └── web/             # React + D3.js application

@@ -391,4 +391,16 @@ mod tests {
         assert_eq!(parse_source("a.tsx", "").language, Language::Tsx);
         assert_eq!(parse_source("a.cjs", "").language, Language::Js);
     }
+
+    #[test]
+    fn crlf_input_counts_lines_and_reports_error_line() {
+        let parsed = parse_source(
+            "a.ts",
+            "const a = 1;
+const = ;
+",
+        );
+        assert_eq!(parsed.loc, 2);
+        assert_eq!(parsed.errors[0].line, 2);
+    }
 }

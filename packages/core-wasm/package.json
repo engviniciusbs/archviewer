@@ -1,0 +1,17 @@
+{
+  "name": "@archviewer/core-wasm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "pkg/core_wasm.js",
+  "types": "pkg/core_wasm.d.ts",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "clean": "node -e \"require('fs').rmSync('pkg',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "vitest": "^2.1.0"
+  }
+}

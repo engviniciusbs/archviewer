@@ -6,8 +6,7 @@ pub type NodeId = u32;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct FileInput {
     pub path: String,
     pub content: String,
@@ -15,8 +14,7 @@ pub struct FileInput {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct AnalyzerConfig {
     pub project_name: String,
     pub max_file_bytes: u32,
@@ -33,8 +31,7 @@ impl Default for AnalyzerConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct AddResult {
     pub accepted: u32,
     pub skipped: u32,
@@ -42,7 +39,7 @@ pub struct AddResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub enum Language {
     Js,
     Jsx,
@@ -52,7 +49,7 @@ pub enum Language {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub enum ImportKind {
     Static,
     Dynamic,
@@ -63,7 +60,7 @@ pub enum ImportKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub enum NodeKind {
     Group,
     File,
@@ -72,7 +69,7 @@ pub enum NodeKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub enum GroupKind {
     Folder,
     Package,
@@ -80,7 +77,7 @@ pub enum GroupKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub enum UnresolvedReason {
     NotFound,
     Asset,
@@ -89,7 +86,7 @@ pub enum UnresolvedReason {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub enum SkipReason {
     TooLarge,
     NotIngestible,
@@ -98,7 +95,7 @@ pub enum SkipReason {
 /// Position is 1-based; column counts characters within the line.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct ParseError {
     pub message: String,
     pub line: u32,
@@ -107,7 +104,7 @@ pub struct ParseError {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct UnresolvedImport {
     pub from: String,
     pub specifier: String,
@@ -116,7 +113,7 @@ pub struct UnresolvedImport {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct SkippedFile {
     pub path: String,
     pub reason: SkipReason,
@@ -124,7 +121,7 @@ pub struct SkippedFile {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct FileParseErrors {
     pub path: String,
     pub errors: Vec<ParseError>,
@@ -132,8 +129,7 @@ pub struct FileParseErrors {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct Issues {
     pub unresolved: Vec<UnresolvedImport>,
     pub skipped: Vec<SkippedFile>,
@@ -143,8 +139,7 @@ pub struct Issues {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct Summary {
     pub files: u32,
     pub edges: u32,
@@ -160,7 +155,7 @@ pub struct Summary {
 /// External nodes have `parent_id: None`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct VNode {
     pub id: NodeId,
     pub kind: NodeKind,
@@ -175,7 +170,7 @@ pub struct VNode {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct VEdge {
     pub from: NodeId,
     pub to: NodeId,
@@ -186,8 +181,7 @@ pub struct VEdge {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct VisibleGraph {
     pub nodes: Vec<VNode>,
     pub edges: Vec<VEdge>,
@@ -195,7 +189,7 @@ pub struct VisibleGraph {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct DepRef {
     pub id: NodeId,
     pub path: String,
@@ -205,7 +199,7 @@ pub struct DepRef {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct WeightedRef {
     pub id: NodeId,
     pub path: String,
@@ -214,7 +208,7 @@ pub struct WeightedRef {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct FileDetail {
     pub id: NodeId,
     pub path: String,
@@ -232,7 +226,7 @@ pub struct FileDetail {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct GroupDetail {
     pub id: NodeId,
     pub path: String,
@@ -247,7 +241,7 @@ pub struct GroupDetail {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct ExternalDetail {
     pub id: NodeId,
     pub name: String,
@@ -256,8 +250,7 @@ pub struct ExternalDetail {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
-#[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub enum Detail {
     File(FileDetail),
     Group(GroupDetail),
@@ -266,7 +259,7 @@ pub enum Detail {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
-#[cfg_attr(feature = "wasm", derive(tsify_next::Tsify))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
 pub struct SearchHit {
     pub id: NodeId,
     pub kind: NodeKind,
