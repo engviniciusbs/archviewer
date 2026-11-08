@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AnalysisClient, WorkerCrashedError, type WorkerLike } from '../../src/analysis/client';
-import type { Request, Response } from '../../src/analysis/protocol';
+import type { Request, WorkerMessage } from '../../src/analysis/protocol';
 
 class FakeWorker implements WorkerLike {
   sent: Request[] = [];
@@ -13,7 +13,7 @@ class FakeWorker implements WorkerLike {
     if (!this.listeners.has(type)) this.listeners.set(type, new Set());
     this.listeners.get(type)!.add(cb);
   }) as WorkerLike['addEventListener'];
-  reply(res: Response) {
+  reply(res: WorkerMessage) {
     this.emit('message', new MessageEvent('message', { data: res }));
   }
   emit(type: string, ev: Event) {
@@ -55,6 +55,21 @@ describe('AnalysisClient', () => {
     await expect(p2).rejects.toBeInstanceOf(WorkerCrashedError);
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb.mock.calls[0][0]).toContain('o worker de análise parou');
+  });
+
+  it('frame fatal (WASM em pânico) rejeita pendentes com WorkerCrashedError e chama onCrash', async () => {
+    const w = new FakeWorker();
+    const c = new AnalysisClient(w);
+    const cb = vi.fn();
+    c.onCrash(cb);
+    const p1 = c.detail(3);
+    const p2 = c.find('a', 5);
+    w.reply({ fatal: true, error: 'unreachable' });
+    await expect(p1).rejects.toBeInstanceOf(WorkerCrashedError);
+    await expect(p2).rejects.toBeInstanceOf(WorkerCrashedError);
+    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb.mock.calls[0][0]).toBe('o worker de análise parou: unreachable');
+    await expect(c.view([0])).rejects.toBeInstanceOf(WorkerCrashedError);
   });
 
   it('onCrash devolve unsubscribe', () => {

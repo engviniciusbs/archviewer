@@ -1,5 +1,5 @@
 import type { Analyzer, AddResult, FileInput } from '@archviewer/core-wasm';
-import type { Method } from './protocol';
+import type { FatalFrame, Method, Request, Response } from './protocol';
 
 export type CoreModule = Pick<typeof import('@archviewer/core-wasm'), 'Analyzer' | 'ignoredDirs' | 'isIngestible'>;
 
@@ -38,4 +38,18 @@ export function createHandler(core: CoreModule): (method: Method, args: unknown[
         return session().find(args[0] as string, args[1] as number);
     }
   };
+}
+
+/** Executa um pedido e monta a resposta; um pânico do WASM vira frame fatal. */
+export function respond(
+  handle: (method: Method, args: unknown[]) => unknown,
+  req: Request,
+): Response | FatalFrame {
+  try {
+    return { id: req.id, ok: true, value: handle(req.method, req.args) };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (err instanceof WebAssembly.RuntimeError) return { fatal: true, error: msg };
+    return { id: req.id, ok: false, error: msg };
+  }
 }

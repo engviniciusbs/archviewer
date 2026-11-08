@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import init, * as core from '@archviewer/core-wasm';
 import type { FileInput, Summary } from '@archviewer/core-wasm';
-import { createHandler } from '../../src/analysis/handler';
+import { createHandler, respond } from '../../src/analysis/handler';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..', '..', '..', '..');
@@ -71,5 +71,27 @@ describe('createHandler', () => {
     h('start', ['outro']);
     const r = h('finish', []) as { summary: Summary };
     expect(r.summary.files).toBe(0);
+  });
+});
+
+describe('respond', () => {
+  const req = { id: 7, method: 'detail' as const, args: [1] };
+
+  it('valor vira ok:true com o id', () => {
+    expect(respond(() => 42, req)).toEqual({ id: 7, ok: true, value: 42 });
+  });
+
+  it('erro comum vira ok:false', () => {
+    const h = () => {
+      throw new Error('sessão não iniciada');
+    };
+    expect(respond(h, req)).toEqual({ id: 7, ok: false, error: 'sessão não iniciada' });
+  });
+
+  it('WebAssembly.RuntimeError (pânico) vira frame fatal', () => {
+    const h = () => {
+      throw new WebAssembly.RuntimeError('unreachable');
+    };
+    expect(respond(h, req)).toEqual({ fatal: true, error: 'unreachable' });
   });
 });

@@ -7,7 +7,7 @@ import type {
   Summary,
   VisibleGraph,
 } from '@archviewer/core-wasm';
-import type { Method, Request, Response } from './protocol';
+import type { Method, Request, WorkerMessage } from './protocol';
 
 export interface FinishResult {
   summary: Summary;
@@ -49,12 +49,16 @@ export class AnalysisClient implements AnalysisApi {
   private dead: Error | null = null;
 
   constructor(private worker: WorkerLike) {
-    worker.addEventListener('message', (e) => this.onMessage((e as MessageEvent<Response>).data));
+    worker.addEventListener('message', (e) => this.onMessage((e as MessageEvent<WorkerMessage>).data));
     worker.addEventListener('error', (e) => this.crash((e as ErrorEvent).message));
     worker.addEventListener('messageerror', () => this.crash('mensagem ilegível'));
   }
 
-  private onMessage(res: Response): void {
+  private onMessage(res: WorkerMessage): void {
+    if ('fatal' in res) {
+      this.crash(res.error);
+      return;
+    }
     const p = this.pending.get(res.id);
     if (!p) return;
     this.pending.delete(res.id);
