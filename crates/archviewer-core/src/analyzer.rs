@@ -58,6 +58,9 @@ impl Analyzer {
         let (mut accepted, mut skipped) = (0u32, 0u32);
         for f in files {
             let path = normalize(&f.path);
+            self.skipped.retain(|s| s.path != path);
+            self.code.remove(&path);
+            self.configs.remove(&path);
             let reason = if !is_ingestible(&path) {
                 Some(SkipReason::NotIngestible)
             } else if f.content.len() > self.config.max_file_bytes as usize {
@@ -70,8 +73,6 @@ impl Analyzer {
                 skipped += 1;
                 continue;
             }
-            self.code.remove(&path);
-            self.configs.remove(&path);
             if is_code(&path) {
                 let parsed = parse_source(&path, &f.content);
                 self.code.insert(path, parsed);
@@ -291,6 +292,92 @@ mod tests {
             .map(|(p, c)| (p.as_str(), c.as_str()))
             .collect();
         assert_eq!(analyzed(&refs).clone_summary().cycles, 0);
+    }
+
+    fn input(path: &str, content: String) -> FileInput {
+        FileInput {
+            path: path.into(),
+            content,
+        }
+    }
+
+    #[test]
+    fn readd_small_after_too_large_clears_skip() {
+        let mut a = Analyzer::new(AnalyzerConfig::default());
+        a.add_files(vec![input("a.ts", "x".repeat(2_097_153))])
+            .unwrap();
+        a.add_files(vec![input("a.ts", String::new())]).unwrap();
+        let s = a.finish().unwrap();
+        assert_eq!((s.skipped, s.files), (0, 1));
+        assert!(a.issues().skipped.is_empty());
+    }
+
+    #[test]
+    fn readd_oversized_after_accept_removes_file() {
+        let mut a = Analyzer::new(AnalyzerConfig::default());
+        a.add_files(vec![input("a.ts", String::new())]).unwrap();
+        a.add_files(vec![input("a.ts", "x".repeat(2_097_153))])
+            .unwrap();
+        let s = a.finish().unwrap();
+        assert_eq!((s.files, s.skipped), (0, 1));
+        assert!(!a.graph().unwrap().nodes.iter().any(|n| n.path == "a.ts"));
+        assert_eq!(a.issues().skipped.len(), 1);
+        assert_eq!(a.issues().skipped[0].reason, SkipReason::TooLarge);
+    }
+
+    #[test]
+    fn same_non_ingestible_twice_single_record() {
+        let mut a = Analyzer::new(AnalyzerConfig::default());
+        a.add_files(vec![input("a.css", String::new())]).unwrap();
+        a.add_files(vec![input("a.css", String::new())]).unwrap();
+        assert_eq!(a.issues().skipped.len(), 1);
+    }
+
+    #[test]
+    fn edge_in_cycle_flags() {
+        let a = analyzed(&[
+            ("a.ts", "import './b'; import './a';"),
+            ("b.ts", "import './a';"),
+            ("c.ts", "import type {D} from './d';"),
+            ("d.ts", "import type {C} from './c';"),
+        ]);
+        let g = a.graph().unwrap();
+        let edge = |f: &str, t: &str| {
+            let (f, t) = (id(&a, f), id(&a, t));
+            g.edges.iter().find(|e| e.from == f && e.to == t).unwrap()
+        };
+        assert!(edge("a.ts", "b.ts").in_cycle);
+        assert!(edge("b.ts", "a.ts").in_cycle);
+        assert!(edge("a.ts", "a.ts").in_cycle);
+        assert!(!edge("c.ts", "d.ts").in_cycle);
+        assert!(!edge("d.ts", "c.ts").in_cycle);
+    }
+
+    #[test]
+    fn edges_merge_specifiers() {
+        let a = analyzed(&[
+            (
+                "a.ts",
+                "import {x} from './b'; import {x} from './b'; import {y} from './b';",
+            ),
+            ("b.ts", ""),
+        ]);
+        let g = a.graph().unwrap();
+        assert_eq!(g.edges.len(), 1);
+        assert_eq!(g.edges[0].kind, crate::model::ImportKind::Static);
+        assert_eq!(g.edges[0].specifiers, vec!["x", "y"]);
+    }
+
+    #[test]
+    fn finish_twice_is_stable() {
+        let mut a = Analyzer::new(AnalyzerConfig::default());
+        a.add_files(vec![input("a.ts", "import 'x';".into())])
+            .unwrap();
+        let s1 = a.finish().unwrap();
+        let n = a.graph().unwrap().nodes.len();
+        let s2 = a.finish().unwrap();
+        assert_eq!(s1, s2);
+        assert_eq!(a.graph().unwrap().nodes.len(), n);
     }
 
     #[test]
