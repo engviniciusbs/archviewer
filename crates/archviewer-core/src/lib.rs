@@ -1,5 +1,6 @@
 pub mod analyzer;
 pub mod cycles;
+pub(crate) mod detail;
 pub(crate) mod graph;
 pub mod memfs;
 pub mod model;
