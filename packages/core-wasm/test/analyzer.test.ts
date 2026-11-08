@@ -36,7 +36,13 @@ describe('core-wasm boundary', () => {
     expect(s).toMatchObject({ files: 8, cycles: 1, externals: 2 }); // externos: react, date-fns
     expect(Object.keys(s)).toContain('parseErrors');
     const v = a.view(a.defaultExpansion());
-    expect(v.nodes.filter((n) => n.kind !== 'external').every((n) => typeof n.parentId === 'number')).toBe(true);
+    const root = v.nodes.find((n) => n.id === 0)!;
+    expect(root).toMatchObject({ kind: 'group', label: 'sample', path: '', expanded: true });
+    expect(root.parentId ?? null).toBeNull();
+    const ids = new Set(v.nodes.map((n) => n.id));
+    const nonRoot = v.nodes.filter((n) => n.kind !== 'external' && n.id !== 0);
+    expect(nonRoot.length).toBeGreaterThan(0);
+    expect(nonRoot.every((n) => typeof n.parentId === 'number' && ids.has(n.parentId))).toBe(true);
     expect(a.issues().unresolved.map((u) => u.reason)).toEqual(['asset']);
     const lazy = a.find('lazy.ts', 1)[0];
     const d = a.detail(lazy.id)!;
@@ -47,8 +53,32 @@ describe('core-wasm boundary', () => {
     a.free();
   });
 
+  it('resolve projeto Vite com references (paths do projeto referenciado)', () => {
+    const a = new Analyzer({ projectName: 'vite', maxFileBytes: 2_097_152 });
+    a.addFiles([
+      {
+        path: 'tsconfig.json',
+        content: '{"files":[],"references":[{"path":"./tsconfig.node.json"},{"path":"./tsconfig.app.json"}]}',
+      },
+      { path: 'tsconfig.node.json', content: '{"extends":"@tsconfig/node22/tsconfig.json","include":["vite.config.ts"]}' },
+      {
+        path: 'tsconfig.app.json',
+        content:
+          '{"extends":"@vue/tsconfig/tsconfig.dom.json","include":["src/**/*"],"compilerOptions":{"paths":{"@/*":["./src/*"]}}}',
+      },
+      { path: 'src/a.ts', content: "import './b'; import '@/c';" },
+      { path: 'src/b.ts', content: '' },
+      { path: 'src/c.ts', content: '' },
+    ]);
+    const s = a.finish();
+    expect(s).toMatchObject({ edges: 2, unresolved: 0, warnings: [] });
+    a.free();
+  });
+
   it('isIngestible segue as regras do core', () => {
     expect(isIngestible('src/a.ts')).toBe(true);
+    expect(isIngestible('./src/a.ts')).toBe(true);
+    expect(isIngestible('src\\a.ts')).toBe(true);
     expect(isIngestible('node_modules/x.js')).toBe(false);
     expect(ignoredDirs()).toContain('node_modules');
   });

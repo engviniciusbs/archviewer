@@ -26,9 +26,10 @@ fn to_js<T: serde::Serialize>(value: &T) -> Result<JsValue, JsError> {
     serde_wasm_bindgen::to_value(value).map_err(|e| JsError::new(&e.to_string()))
 }
 
+/// Whether a path would be ingested; accepts `./` prefixes and `\` separators.
 #[wasm_bindgen(js_name = isIngestible)]
 pub fn is_ingestible(path: &str) -> bool {
-    paths::is_ingestible(path)
+    paths::is_ingestible(&paths::normalize(path))
 }
 
 #[wasm_bindgen(js_name = ignoredDirs)]
