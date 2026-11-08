@@ -313,6 +313,43 @@ describe('select', () => {
     await store.getState().select(5);
     expect(store.getState().detail).toBeNull();
   });
+
+  it('detail null marca a falha para aquele id', async () => {
+    const { api, store } = await ready();
+    api.detail.mockResolvedValueOnce(null);
+    await store.getState().select(5);
+    expect(store.getState().detailError).toBe(5);
+  });
+
+  it('detail que lança marca a falha para aquele id', async () => {
+    const { api, store } = await ready();
+    api.detail.mockRejectedValueOnce(new Error('boom'));
+    await store.getState().select(5);
+    expect(store.getState().phase).toBe('ready');
+    expect(store.getState().detailError).toBe(5);
+    expect(store.getState().detail).toBeNull();
+  });
+
+  it('um select bem-sucedido depois limpa a falha', async () => {
+    const { api, store } = await ready();
+    api.detail.mockResolvedValueOnce(null);
+    await store.getState().select(5);
+    await store.getState().select(7);
+    expect(store.getState().detailError).toBeNull();
+    expect(store.getState().detail).toMatchObject({ id: 7 });
+  });
+
+  it('falha antiga chegando depois é descartada', async () => {
+    const { api, store } = await ready();
+    const d1 = deferred<Detail | null>();
+    api.detail.mockImplementationOnce(() => d1.promise);
+    const s1 = store.getState().select(5);
+    await store.getState().select(7);
+    d1.reject(new Error('tarde'));
+    await s1;
+    expect(store.getState().detailError).toBeNull();
+    expect(store.getState().detail).toMatchObject({ id: 7 });
+  });
 });
 
 describe('reveal', () => {

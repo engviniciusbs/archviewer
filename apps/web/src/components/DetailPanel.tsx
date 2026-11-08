@@ -223,6 +223,7 @@ function ExternalView({ d, go }: { d: ExternalD; go: Go }) {
 export function DetailPanel() {
   const selected = useGraphStore((s) => s.selected);
   const detail = useGraphStore((s) => s.detail);
+  const detailError = useGraphStore((s) => s.detailError);
   const graph = useGraphStore((s) => s.graph);
   const expanded = useGraphStore((s) => s.expanded);
   const toggle = useGraphStore((s) => s.toggle);
@@ -242,6 +243,16 @@ export function DetailPanel() {
       <div className="panel__empty">
         <p>Selecione um nó no grafo ou no explorador</p>
         <p className="muted">Aqui aparecem imports, dependentes, ciclos e o trecho do arquivo.</p>
+      </div>
+    );
+  } else if (detailError === selected) {
+    body = (
+      <div className="panel__empty">
+        <p className="status-line status-line--error">
+          <Icon name="warning" />
+          Não foi possível carregar os detalhes
+        </p>
+        <p className="muted">Selecione o nó de novo ou escolha outro no grafo ou no explorador.</p>
       </div>
     );
   } else if (!detail || detail.id !== selected) {

@@ -32,6 +32,8 @@ export interface GraphState {
   expanded: number[];
   selected: number | null;
   detail: Detail | null;
+  /** Id cujo detalhe não pôde ser carregado (resposta nula ou falha); null = sem falha. */
+  detailError: number | null;
   filters: Filters;
   focusRequest: { id: number; seq: number } | null;
   /** Busca ativa, compartilhada entre a toolbar e o explorador; null = sem busca. */
@@ -110,6 +112,7 @@ const initialData = (): DataState => ({
   expanded: [],
   selected: null,
   detail: null,
+  detailError: null,
   focusRequest: null,
   searchResults: null,
 });
@@ -155,13 +158,15 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
     const loadDetail = async (id: number | null): Promise<void> => {
       const my = ++detailSeq;
       const c = client;
-      set({ selected: id, detail: null });
+      set({ selected: id, detail: null, detailError: null });
       if (id === null || !c) return;
       try {
         const d = await c.detail(id);
-        if (my === detailSeq) set({ detail: d });
+        if (my === detailSeq) set(d ? { detail: d } : { detailError: id });
       } catch {
-        // falha de worker chega por onCrash; aqui o painel só fica sem detalhe.
+        // Queda do worker chega por onCrash (e o teardown invalida este pedido);
+        // qualquer outra falha deixa o painel em erro para este id.
+        if (my === detailSeq) set({ detailError: id });
       }
     };
 

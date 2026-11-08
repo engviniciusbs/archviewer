@@ -51,6 +51,22 @@ describe('DetailPanel', () => {
     expect(screen.getByText('Selecione um nó no grafo ou no explorador')).toBeInTheDocument();
   });
 
+  it('falha ao carregar mostra o erro em vez do esqueleto', async () => {
+    const { store } = await setup(null, 2);
+    store.setState({ detailError: 2 });
+    renderWith(store, <DetailPanel />);
+    expect(screen.getByText('Não foi possível carregar os detalhes')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Carregando detalhes')).not.toBeInTheDocument();
+  });
+
+  it('falha de outro id não vale para a seleção atual', async () => {
+    const { store } = await setup(null, 2);
+    store.setState({ detailError: 3 });
+    renderWith(store, <DetailPanel />);
+    expect(screen.getByLabelText('Carregando detalhes')).toBeInTheDocument();
+    expect(screen.queryByText('Não foi possível carregar os detalhes')).not.toBeInTheDocument();
+  });
+
   it('arquivo: caminho em mono e fan-in/fan-out como números', async () => {
     const { store } = await setup(fileDetail({ fanIn: 1234, fanOut: 2 }));
     renderWith(store, <DetailPanel />);
