@@ -44,13 +44,18 @@ test('abre o sample-project e navega pela arquitetura', async ({ page }) => {
   const groups = tree.locator('[role="treeitem"][data-kind="group"][aria-level="1"]');
   await expect(groups.first()).toBeVisible();
 
-  // Expande um grupo: o pai fica expandido e os filhos aparecem.
-  const group = groups.first();
-  const wasOpen = (await group.getAttribute('aria-expanded')) === 'true';
-  if (!wasOpen) await group.click();
-  await expect(group).toHaveAttribute('aria-expanded', 'true');
-  const level = Number(await group.getAttribute('aria-level'));
-  await expect(tree.locator(`[role="treeitem"][aria-level="${level + 1}"]`).first()).toBeVisible();
+  // Expande um grupo recolhido de nível 2 (o do ciclo): aria-expanded vai de false a true
+  // e os filhos aparecem um nível abaixo.
+  const circular = tree.locator('[role="treeitem"][data-kind="group"][aria-level="2"]', {
+    hasText: 'circular',
+  });
+  await expect(circular).toHaveAttribute('aria-expanded', 'false');
+  await expect(tree.locator('[role="treeitem"][aria-level="3"]', { hasText: 'a.ts' })).toHaveCount(0);
+  await circular.click();
+  await expect(circular).toHaveAttribute('aria-expanded', 'true');
+  const children = tree.locator('[role="treeitem"][aria-level="3"]');
+  await expect(children.filter({ hasText: 'a.ts' })).toBeVisible();
+  await expect(children.filter({ hasText: 'b.ts' })).toBeVisible();
 
   // Seleciona lazy.ts pela busca.
   await page.getByRole('combobox', { name: 'Buscar arquivo ou pasta' }).fill('lazy.ts');
