@@ -67,13 +67,12 @@ describe('App', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('fases de leitura mostram o placeholder com o progresso', () => {
+  it('fases de leitura mostram a LoadingScreen com o progresso', () => {
     const store = storeWith();
     store.setState({ phase: 'reading', progress: { read: 1234, total: 5678 } });
     renderWith(store, <App />);
     const status = screen.getByRole('status');
-    expect(status).toHaveTextContent('Lendo projeto…');
-    expect(status).toHaveTextContent('1.234 de 5.678 arquivos');
+    expect(status).toHaveTextContent('Lendo 1.234 de 5.678 arquivos');
   });
 
   it('ready mostra o shell com toolbar, explorador, grafo, detalhes e status', async () => {

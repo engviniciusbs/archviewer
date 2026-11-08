@@ -6,9 +6,18 @@
     <meta name="description" content="ArchViewer: veja a arquitetura de um projeto JS/TS como um grafo, direto no navegador." />
     <title>ArchViewer</title>
     <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      /* Sem script: grade de pontos no passo da célula do campo ASCII (8 por 16). */
+      #root:empty {
+        min-height: 100dvh;
+        background-image: radial-gradient(circle, oklch(81% 0.045 255) 1px, transparent 1.5px);
+        background-size: 8px 16px;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>O ArchViewer precisa de JavaScript para ler e analisar o projeto.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

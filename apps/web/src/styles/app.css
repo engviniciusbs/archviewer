@@ -879,7 +879,8 @@
   .tray {
     flex-wrap: wrap;
   }
-  .screen__panel {
+  .screen__panel,
+  .loading__panel {
     padding: var(--space-lg);
   }
 }
@@ -890,4 +891,43 @@
   .tree__twist .icon {
     transition: none;
   }
+}
+
+/* ---- loading screen: ASCII field above the panel ----------------------- */
+
+.loading {
+  display: grid;
+  grid-template-rows: minmax(8rem, 1fr) auto;
+  gap: var(--space-lg);
+  min-height: 100dvh;
+  padding: var(--gutter);
+  background: var(--color-paper);
+}
+.loading__field {
+  position: relative;
+  min-height: 8rem;
+  overflow: hidden;
+}
+.ascii-field {
+  display: block;
+}
+.loading__panel {
+  display: grid;
+  gap: var(--space-md);
+  justify-self: center;
+  width: 100%;
+  max-width: 36rem;
+  padding: var(--space-xl);
+}
+.loading__message {
+  display: grid;
+  gap: var(--space-sm);
+}
+.loading__bar {
+  height: var(--space-sm);
+  background: var(--color-paper-3);
+}
+.loading__bar-fill {
+  height: 100%;
+  background: var(--color-accent);
 }
