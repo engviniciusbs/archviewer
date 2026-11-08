@@ -109,7 +109,7 @@ UI ◀── FileDetail   ◀── detail(nodeId)
 
 ### `VisibleGraph`
 
-- **Nós:** `{ id, kind: group | file | external, label, size, parentId, inCycle }`.
+- **Nós:** `{ id, kind: group | file | external, label, size, parentId, inCycle, expandable, expanded }`. Grupos expandidos vêm com `expanded: true`, para o explorador de arquivos; o renderer só desenha os não expandidos.
 - **Arestas:** `{ from, to, weight, inCycle, typeOnly }`, agregadas até o ancestral visível mais próximo de cada lado. As arestas internas a um grupo recolhido são omitidas.
 - **Estado inicial:** só o nível de topo (pastas de primeiro nível, ou os pacotes do workspace).
 
