@@ -1,0 +1,33 @@
+/* Hallmark Terminal — base */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { overflow-x: clip; }
+body {
+  overflow-x: clip;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-stretch: var(--stretch-body);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-stretch: var(--stretch-display);
+  letter-spacing: var(--tracking-display);
+  line-height: 1.12;
+}
+a { color: var(--color-ink-2); text-decoration: underline dotted; text-underline-offset: 3px; }
+a:hover { color: var(--color-accent); }
+button, input, select, textarea { font: inherit; color: inherit; background: none; border: none; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+::selection { background: var(--color-accent-wash); color: var(--color-ink); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+pkg/
+target/
+*.wasm
+
+# Rust
+packages/wasm-parser/target/
+packages/wasm-parser/pkg/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Turbo
+.turbo/
+
+# Hallmark
+.hallmark/
+
+# Test
+coverage/
+playwright-report/
