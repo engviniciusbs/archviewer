@@ -4,7 +4,7 @@ import { useGraphStore } from '../store/graph-store';
 import { visibleUnresolved } from '../store/selectors';
 import { count, seconds } from './format';
 import { Icon } from './Icon';
-import { IssuesPanel } from './IssuesPanel';
+import { IssuesPanel, SkippedPanel } from './IssuesPanel';
 
 type StatusInput = Pick<Summary, 'files' | 'edges' | 'cycles' | 'externals'> & {
   unresolvedShown: number;
@@ -27,6 +27,9 @@ export function statusItems(s: StatusInput): string[] {
 }
 
 const UNRESOLVED_INDEX = 4;
+const IGNORED_INDEX = 5;
+
+type Disclosure = 'unresolved' | 'ignored';
 
 export function StatusBar() {
   const summary = useGraphStore((s) => s.summary);
@@ -35,8 +38,9 @@ export function StatusBar() {
   const ingestSkipped = useGraphStore((s) => s.ingestSkipped);
   const elapsedMs = useGraphStore((s) => s.elapsedMs);
   const fallback = useGraphStore((s) => s.fallback);
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
+  const [open, setOpen] = useState<Disclosure | null>(null);
+  const unresolvedId = useId();
+  const ignoredId = useId();
 
   if (!summary) return null;
   const unresolved = issues ? visibleUnresolved(issues, filters) : [];
@@ -48,10 +52,18 @@ export function StatusBar() {
   });
   const warnings = [...new Set([...(issues?.warnings ?? []), ...summary.warnings])];
   const clean = unresolved.length === 0 && warnings.length === 0;
+  const skipped = [...(issues?.skipped ?? []), ...ingestSkipped];
+  const disclosure: Record<number, { which: Disclosure; id: string }> = {
+    [UNRESOLVED_INDEX]: { which: 'unresolved', id: unresolvedId },
+    [IGNORED_INDEX]: { which: 'ignored', id: ignoredId },
+  };
 
   return (
     <footer className="statusbar">
-      {open && <IssuesPanel id={panelId} unresolved={unresolved} onClose={() => setOpen(false)} />}
+      {open === 'unresolved' && (
+        <IssuesPanel id={unresolvedId} unresolved={unresolved} onClose={() => setOpen(null)} />
+      )}
+      {open === 'ignored' && <SkippedPanel id={ignoredId} skipped={skipped} onClose={() => setOpen(null)} />}
       <div className="statusbar__line">
         <div role="status" className={clean ? 'status-line' : 'status-line status-line--warn'}>
           <Icon name={clean ? 'check' : 'warning'} />
@@ -59,13 +71,16 @@ export function StatusBar() {
           <ul className="statusbar__items">
             {items.map((text, i) => (
               <li key={i} className="num">
-                {i === UNRESOLVED_INDEX ? (
+                {disclosure[i] ? (
                   <button
                     type="button"
                     className="linkish"
-                    aria-expanded={open}
-                    aria-controls={panelId}
-                    onClick={() => setOpen((o) => !o)}
+                    aria-expanded={open === disclosure[i].which}
+                    aria-controls={disclosure[i].id}
+                    onClick={() => {
+                      const which = disclosure[i]!.which;
+                      setOpen((o) => (o === which ? null : which));
+                    }}
                   >
                     {text}
                   </button>

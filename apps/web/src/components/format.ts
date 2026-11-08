@@ -1,4 +1,5 @@
-import type { UnresolvedReason } from '@archviewer/core-wasm';
+import type { SkipReason, UnresolvedReason } from '@archviewer/core-wasm';
+import type { IngestSkip } from '../ingest/read';
 
 const int = new Intl.NumberFormat('pt-BR');
 const oneDecimal = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -21,4 +22,10 @@ export const REASON: Record<UnresolvedReason, string> = {
   notFound: 'não encontrado',
   asset: 'asset',
   unknownAlias: 'alias desconhecido',
+};
+
+export const SKIP_REASON: Record<SkipReason | IngestSkip['reason'], string> = {
+  tooLarge: 'maior que 2 MB',
+  notIngestible: 'não suportado',
+  unreadable: 'ilegível',
 };

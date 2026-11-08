@@ -92,6 +92,52 @@ describe('StatusBar em ready', () => {
     expect(table).toHaveTextContent('./missing');
   });
 
+  it('"ignorados" abre a lista com caminho e motivo, do core e da leitura', async () => {
+    const store = await setup({
+      finish: {
+        summary: summary({ skipped: 2 }),
+        issues: issues({
+          skipped: [
+            { path: 'dist/huge.js', reason: 'tooLarge' },
+            { path: 'docs/a.md', reason: 'notIngestible' },
+          ],
+        }),
+      },
+    });
+    store.setState({
+      ingestSkipped: [
+        { path: 'locked', reason: 'unreadable' },
+        { path: 'big.js', reason: 'tooLarge' },
+      ],
+    });
+    renderWith(store, <StatusBar />);
+    const btn = screen.getByRole('button', { name: '4 ignorados' });
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(btn);
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
+    const rows = within(screen.getByRole('table', { name: 'Arquivos ignorados' })).getAllByRole('row').slice(1);
+    expect(rows.map((r) => [...r.querySelectorAll('td')].map((td) => td.textContent))).toEqual([
+      ['dist/huge.js', 'maior que 2 MB'],
+      ['docs/a.md', 'não suportado'],
+      ['locked', 'ilegível'],
+      ['big.js', 'maior que 2 MB'],
+    ]);
+    // Abrir os não resolvidos fecha os ignorados.
+    await userEvent.click(screen.getByRole('button', { name: '1 não resolvido' }));
+    expect(screen.queryByRole('table', { name: 'Arquivos ignorados' })).not.toBeInTheDocument();
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(btn);
+    await userEvent.click(within(screen.getByRole('region', { name: 'Ignorados' })).getByRole('button', { name: 'Fechar' }));
+    expect(screen.queryByRole('region', { name: 'Ignorados' })).not.toBeInTheDocument();
+  });
+
+  it('sem ignorados, a lista explica que nada ficou de fora', async () => {
+    const store = await setup();
+    renderWith(store, <StatusBar />);
+    await userEvent.click(screen.getByRole('button', { name: '0 ignorados' }));
+    expect(screen.getByRole('region', { name: 'Ignorados' })).toHaveTextContent('Nenhum arquivo ficou de fora da análise.');
+  });
+
   it('lista os warnings', async () => {
     const store = await setup({
       finish: { issues: issues({ warnings: ['tsconfig.json inválido: alias ignorados'] }) },
