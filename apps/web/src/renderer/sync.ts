@@ -98,8 +98,9 @@ export function syncGraph(
     g.addNode(nodeKey(n.id), { ...nodeVisual(n, theme), x: p.x, y: p.y });
     added.push(n.id);
   }
+  const addedSet = new Set(added);
   for (const n of r.nodes) {
-    if (!added.includes(n.id)) g.mergeNodeAttributes(nodeKey(n.id), nodeVisual(n, theme));
+    if (!addedSet.has(n.id)) g.mergeNodeAttributes(nodeKey(n.id), nodeVisual(n, theme));
   }
 
   for (const [key, e] of wantEdges) {
