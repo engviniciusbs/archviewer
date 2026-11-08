@@ -22,7 +22,8 @@ export function AsciiField({ ratio }: { ratio: number }) {
     const style = getComputedStyle(document.documentElement);
     const palette = GLYPH_TOKENS.map((t) => canvasToRgb(style.getPropertyValue(t).trim()));
     const font = style.getPropertyValue('--font-outlier').trim() || 'monospace';
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+    let reduced = mq?.matches ?? false;
     const start = performance.now();
     let cols = 0;
     let rows = 0;
@@ -104,7 +105,16 @@ export function AsciiField({ ratio }: { ratio: number }) {
     io?.observe(canvas);
     const onVisibility = () => (document.hidden ? stop() : run());
     document.addEventListener('visibilitychange', onVisibility);
+    const onMotion = (e: MediaQueryListEvent) => {
+      reduced = e.matches;
+      if (reduced) {
+        stop();
+        draw(performance.now());
+      } else run();
+    };
+    mq?.addEventListener?.('change', onMotion);
     return () => {
+      mq?.removeEventListener?.('change', onMotion);
       stop();
       ro?.disconnect();
       io?.disconnect();
