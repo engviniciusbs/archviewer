@@ -1,81 +1,117 @@
 # ArchViewer
 
-> Software Architecture Visualizer — 100% browser-based
+> Visualizador de arquitetura de software, 100% no navegador
 
-ArchViewer lets you select a local JavaScript/TypeScript project folder and instantly generates an interactive architecture map showing files, folders, dependencies, and imports.
+O ArchViewer abre a pasta de um projeto JavaScript/TypeScript e mostra a arquitetura dele como um grafo interativo: pastas, arquivos, dependências e imports.
 
-## Features
+## Recursos
 
-- **🕸️ Interactive Graph** — Force-directed visualization of your project's dependency tree with D3.js
-- **⚡ WebAssembly Parser** — Rust-powered AST parsing via OXC for accurate import/export extraction
-- **🤖 AI Insights** — Ask AI to explain files, suggest refactors, or find architectural issues
-- **🔒 Privacy-First** — All code stays in your browser. Nothing leaves unless you explicitly ask AI.
-- **🎨 Terminal Theme** — Phosphor-green-on-black aesthetic built for developers
+- **Grafo interativo**: renderizado em WebGL com Sigma e graphology, com grupos que se expandem e se recolhem.
+- **Analisador em WebAssembly**: parsing de AST em Rust (OXC) para extrair imports e exports com precisão, rodando num worker.
+- **Ciclos e pendências**: destaca dependências circulares e lista os imports que não foram resolvidos.
+- **Explorador, busca e detalhes**: árvore de arquivos, busca por nome e caminho, e um painel com fan-in, fan-out, imports e trecho do código.
+- **Privacidade**: o código nunca sai do navegador.
 
-## Tech Stack
+## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React 19 + D3.js + Vite |
-| Parser | Rust + OXC → WebAssembly |
-| AI | OpenAI / Anthropic (bring your own key) |
-| Styling | Hallmark Terminal theme (Martian Mono) |
-| Monorepo | pnpm workspaces + Turborepo |
+| Camada | Tecnologia |
+|--------|-----------|
+| Frontend | React 19 + Vite + Sigma (WebGL) |
+| Analisador | Rust + OXC → WebAssembly, em um Web Worker |
+| Testes | Vitest, Playwright e `cargo test` |
+| Monorepo | pnpm workspaces |
 
-## Getting Started
+## Primeiros passos
 
-### Prerequisites
+### Pré-requisitos
 
 - [Node.js](https://nodejs.org/) >= 20
 - [pnpm](https://pnpm.io/) >= 9
-- [Rust](https://rustup.rs/) (for building the Wasm parser)
-- [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/)
+- [Rust](https://rustup.rs/) (para compilar o core em Wasm), com o target wasm e a CLI do bindgen:
 
-### Install & Run
+  ```bash
+  rustup target add wasm32-unknown-unknown
+  cargo install wasm-bindgen-cli --version 0.2.130
+  ```
+
+  A versão da CLI precisa ser a mesma do `wasm-bindgen` fixado no `Cargo.lock`; o `pnpm build:wasm` confere isso e mostra o comando de instalação se houver diferença.
+
+**Nota para Windows:** compilar Rust exige um linker. Instale as MSVC Build Tools ou use a toolchain GNU (`rustup override set stable-x86_64-pc-windows-gnu`) com o MinGW-w64 no `PATH`.
+
+### Rodar o app
 
 ```bash
-# Clone
+# Clonar
 git clone https://github.com/engviniciusbs/archviewer.git
 cd archviewer
 
-# Install dependencies
+# Instalar dependências
 pnpm install
 
-# Build Wasm parser
+# Compilar o analisador Wasm
 pnpm build:wasm
 
-# Start dev server
-pnpm dev
+# Subir o servidor de desenvolvimento
+pnpm --filter @archviewer/web dev
 ```
 
-### Usage
+### Uso
 
-1. Open the app in Chrome/Edge (or Firefox/Safari with limited features)
-2. Click "Open Project" and select your JS/TS project folder
-3. Explore the interactive dependency graph
-4. Click any node to see details and ask AI for insights
+1. Abra o app no Chrome ou no Edge (no Firefox e no Safari, a pasta é escolhida pelo seletor de arquivos).
+2. Clique em "Abrir projeto" e escolha a pasta do seu projeto JS/TS.
+3. Explore o grafo de dependências.
+4. Selecione um nó, no grafo ou no explorador, para ver imports, dependentes e ciclos.
 
-## Architecture
+### Testes
+
+```bash
+pnpm --filter @archviewer/web typecheck
+pnpm --filter @archviewer/web lint
+pnpm --filter @archviewer/web test
+
+# Ponta a ponta (compila o app e abre o fixtures/sample-project num navegador real)
+pnpm --filter @archviewer/web exec playwright install chromium
+pnpm --filter @archviewer/web e2e
+```
+
+Sem o Chromium do Playwright, use um navegador instalado: `PW_CHANNEL=msedge pnpm --filter @archviewer/web e2e`.
+
+## Arquitetura
 
 ```
 archviewer/
+├── crates/
+│   └── archviewer-core/ # núcleo em Rust: parsing, resolução e grafo
 ├── packages/
-│   ├── wasm-parser/     # Rust → WebAssembly (OXC AST parser)
-│   └── ai-bridge/       # LLM abstraction layer (TypeScript)
+│   └── core-wasm/       # wrapper wasm-bindgen em volta do archviewer-core
 ├── apps/
-│   └── web/             # React + D3.js application
+│   └── web/             # aplicação React + Sigma
 └── fixtures/
-    └── sample-project/  # Test fixtures
+    └── sample-project/  # projeto de exemplo para testes
 ```
 
-## Browser Support
+## Suporte de navegadores
 
-| Browser | File Access | Status |
-|---------|------------|--------|
-| Chrome / Edge | File System Access API | ✅ Full support |
-| Firefox | webkitdirectory fallback | ⚠️ Limited |
-| Safari | webkitdirectory fallback | ⚠️ Limited |
+| Navegador | Acesso a arquivos | Status |
+|-----------|-------------------|--------|
+| Chrome / Edge | File System Access API | Suporte completo |
+| Firefox | Seletor de arquivos (`webkitdirectory`) | Funciona, com o aviso de que não há acesso direto à pasta |
+| Safari | Seletor de arquivos (`webkitdirectory`) | Funciona, com o aviso de que não há acesso direto à pasta |
 
-## License
+## Privacidade
+
+Nada sai do navegador. A pasta é lida localmente, analisada por um worker em WebAssembly na sua máquina, e nenhum arquivo, caminho ou métrica é enviado a servidor algum.
+
+## Produção
+
+O app roda em **https://archviewer.viniciusbsarmento.com**.
+
+- Todo push na `main` dispara o workflow `ci`. Se o job `core` passar (Rust, WASM, testes, typecheck, lint e e2e), o job `deploy` publica o `apps/web/dist` no environment `production`.
+- O app é estático. Na VPS, o nginx serve `/var/www/archviewer/current`, e só o Cloudflare (proxy, SSL strict) chega à origem.
+- O deploy entra como o usuário `archviewer`. A chave dele é restrita, no servidor, ao script [`deploy/archviewer-receive.sh`](deploy/archviewer-receive.sh), instalado em `/usr/local/bin/archviewer-receive`. O script cria uma release nova, troca o link `current` e mantém as 5 últimas.
+- **Rollback:** na VPS, aponte `current` para uma release anterior, por exemplo `ln -sfn /var/www/archviewer/releases/<release> /var/www/archviewer/current`.
+- **Secrets** (environment `production`, liberado só para a `main`): `ARCHVIEWER_DEPLOY_KEY`, `ARCHVIEWER_KNOWN_HOSTS` e a variável `DEPLOY_HOST`.
+
+## Licença
 
 MIT

@@ -1,0 +1,122 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Core tests (wasm feature off)
+        run: cargo test -p archviewer-core
+      - name: Workspace tests
+        run: cargo test --workspace
+
+      - name: Perf check (20k files)
+        run: cargo test -p archviewer-core --release --test perf -- --ignored
+
+      - name: Resolve wasm-bindgen version from Cargo.lock
+        id: wb
+        run: |
+          v=$(awk '/^name = "wasm-bindgen"$/ {getline; gsub(/version = |"/, ""); print; exit}' Cargo.lock)
+          test -n "$v"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: "wasm-bindgen-cli@${{ steps.wb.outputs.version }}"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build and test core-wasm
+        run: pnpm --filter @archviewer/core-wasm build && pnpm --filter @archviewer/core-wasm test
+
+      - name: Web typecheck
+        run: pnpm --filter @archviewer/web typecheck
+      - name: Web lint
+        run: pnpm --filter @archviewer/web lint
+      - name: Web unit tests
+        run: pnpm --filter @archviewer/web test
+      - name: Install Playwright Chromium
+        run: pnpm --filter @archviewer/web exec playwright install --with-deps chromium
+      - name: Web e2e
+        run: pnpm --filter @archviewer/web e2e
+
+      - name: Production build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: pnpm --filter @archviewer/web build
+      - name: Upload web dist
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    # Production: every push to main that passes the core job.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: core
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://archviewer.viniciusbsarmento.com
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.ARCHVIEWER_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ARCHVIEWER_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # The key is pinned server-side to /usr/local/bin/archviewer-receive (deploy/archviewer-receive.sh):
+      # it unpacks the tar into a new release and swaps the `current` symlink.
+      - name: Publish release
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          test -f dist/index.html
+          tar -C dist -cf - . | ssh -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes "archviewer@${DEPLOY_HOST}" "${GITHUB_SHA}"
+
+      - name: Smoke check
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://archviewer.viniciusbsarmento.com/) && [ "$code" = 200 ] && break
+            sleep 5
+          done
+          [ "$code" = 200 ]
+          curl -sf https://archviewer.viniciusbsarmento.com/ | grep -q '<title>ArchViewer</title>'

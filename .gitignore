@@ -8,10 +8,6 @@ pkg/
 target/
 *.wasm
 
-# Rust
-packages/wasm-parser/target/
-packages/wasm-parser/pkg/
-
 # IDE
 .vscode/
 .idea/
@@ -36,3 +32,5 @@ Thumbs.db
 # Test
 coverage/
 playwright-report/
+test-results/
+/target/

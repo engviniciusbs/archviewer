@@ -13,7 +13,7 @@ export default defineConfig({
     format: 'es',
   },
   optimizeDeps: {
-    exclude: ['@archviewer/wasm-parser'],
+    exclude: ['@archviewer/core-wasm'],
   },
   build: {
     target: 'esnext',
