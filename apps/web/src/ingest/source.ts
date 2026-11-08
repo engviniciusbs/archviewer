@@ -6,30 +6,38 @@ export interface DirSource {
   read(path: string): Promise<string>;
 }
 
-/** Lista os filhos diretos de `dir` a partir de um índice plano de caminhos -> tamanho. */
-function listFromIndex(index: Map<string, number>, dir: string): DirEntry[] {
-  const prefix = dir === '' ? '' : `${dir}/`;
-  const out = new Map<string, DirEntry>();
+/**
+ * Indexa uma vez os filhos diretos de cada pasta a partir de caminhos -> tamanho, para que
+ * `list` não percorra o índice inteiro a cada chamada (o seletor inclui node_modules).
+ */
+function buildDirIndex(index: Iterable<[string, number]>): (dir: string) => DirEntry[] {
+  const dirs = new Map<string, Map<string, DirEntry>>();
+  const child = (dir: string, entry: DirEntry) => {
+    let kids = dirs.get(dir);
+    if (!kids) dirs.set(dir, (kids = new Map()));
+    if (!kids.has(entry.name)) kids.set(entry.name, entry);
+  };
   for (const [path, size] of index) {
-    if (!path.startsWith(prefix)) continue;
-    const rest = path.slice(prefix.length);
-    const slash = rest.indexOf('/');
-    if (slash === -1) out.set(rest, { name: rest, kind: 'file', size });
-    else {
-      const name = rest.slice(0, slash);
-      if (!out.has(name)) out.set(name, { name, kind: 'dir', size: 0 });
+    const segs = path.split('/');
+    let dir = '';
+    for (let i = 0; i < segs.length - 1; i++) {
+      child(dir, { name: segs[i]!, kind: 'dir', size: 0 });
+      dir = dir ? `${dir}/${segs[i]}` : segs[i]!;
     }
+    child(dir, { name: segs[segs.length - 1]!, kind: 'file', size });
   }
-  return [...out.values()];
+  // Cópia: quem chama (scan) ordena a lista no lugar.
+  return (dir) => [...(dirs.get(dir)?.values() ?? [])];
 }
 
 export function memorySource(name: string, files: Record<string, string>): DirSource {
   const enc = new TextEncoder();
   const index = new Map<string, number>();
   for (const [path, content] of Object.entries(files)) index.set(path, enc.encode(content).length);
+  const list = buildDirIndex(index);
   return {
     name,
-    list: async (dir) => listFromIndex(index, dir),
+    list: async (dir) => list(dir),
     read: async (path) => {
       const content = files[path];
       if (content === undefined) throw new Error(`arquivo não encontrado: ${path}`);
@@ -56,9 +64,10 @@ export function fromFileList(files: ArrayLike<File>): DirSource {
     byPath.set(path, f);
     index.set(path, f.size);
   }
+  const list = buildDirIndex(index);
   return {
     name: rootName,
-    list: async (dir) => listFromIndex(index, dir),
+    list: async (dir) => list(dir),
     read: async (path) => {
       const f = byPath.get(path);
       if (!f) throw new Error(`arquivo não encontrado: ${path}`);

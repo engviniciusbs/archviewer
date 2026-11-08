@@ -3,6 +3,9 @@ import type { DirEntry, DirSource } from './source';
 
 export type ScanFile = { path: string; size: number };
 
+/** Pastas listadas entre duas cedidas ao event loop, para o Cancelar e a animação seguirem vivos. */
+const YIELD_EVERY_DIRS = 50;
+
 export function abortError(): DOMException {
   return new DOMException('cancelado', 'AbortError');
 }
@@ -19,8 +22,10 @@ export async function scan(
   const ignored = new Set(opts.ignoredDirs);
   const git = new GitignoreStack();
   const out: ScanFile[] = [];
+  let listed = 0;
 
   async function walk(dir: string): Promise<void> {
+    if (++listed % YIELD_EVERY_DIRS === 0) await new Promise((r) => setTimeout(r, 0));
     if (opts.signal?.aborted) throw abortError();
     let entries: DirEntry[];
     try {

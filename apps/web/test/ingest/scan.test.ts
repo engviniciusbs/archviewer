@@ -82,4 +82,22 @@ describe('scan', () => {
     };
     await expect(scan(src, { ignoredDirs })).rejects.toThrow('negado');
   });
+
+  it('cede ao event loop durante varreduras longas', async () => {
+    const rec: Record<string, string> = {};
+    for (let i = 0; i < 200; i++) rec[`d${i}/a.ts`] = '1';
+    const src = memorySource('p', rec);
+    let timerFired = false;
+    setTimeout(() => {
+      timerFired = true;
+    }, 0);
+    const orig = src.list.bind(src);
+    const seen: boolean[] = [];
+    src.list = async (dir) => {
+      seen.push(timerFired);
+      return orig(dir);
+    };
+    await scan(src, { ignoredDirs });
+    expect(seen).toContain(true);
+  });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fromDirectoryHandle, fromFileList, memorySource } from '../../src/ingest/source';
+import { scan } from '../../src/ingest/scan';
 
 function file(rel: string, content: string): File {
   const f = new File([content], rel.split('/').pop()!);
@@ -20,6 +21,41 @@ describe('fromFileList', () => {
       ]),
     );
     expect(await src.read('src/a.ts')).toBe('abc');
+  });
+});
+
+describe('fromFileList em escala', () => {
+  /** Objetos com a forma de File; o fromFileList só lê nome, caminho relativo e tamanho. */
+  const fake = (rel: string, size = 1) => ({ name: rel.split('/').pop()!, webkitRelativePath: rel, size }) as File;
+
+  it('lista filhos diretos de pastas aninhadas', async () => {
+    const src = fromFileList([fake('r/a/b/c.ts', 3), fake('r/a/d.ts', 2), fake('r/a/b/e/f.ts')]);
+    expect(await src.list('a')).toEqual(
+      expect.arrayContaining([
+        { name: 'b', kind: 'dir', size: 0 },
+        { name: 'd.ts', kind: 'file', size: 2 },
+      ]),
+    );
+    expect(await src.list('a')).toHaveLength(2);
+    expect(await src.list('a/b')).toEqual(
+      expect.arrayContaining([
+        { name: 'c.ts', kind: 'file', size: 3 },
+        { name: 'e', kind: 'dir', size: 0 },
+      ]),
+    );
+    expect(await src.list('nada')).toEqual([]);
+  });
+
+  it('varre 20 mil fontes ao lado de 200 mil entradas de node_modules rapidamente', async () => {
+    const files: File[] = [];
+    for (let i = 0; i < 200_000; i++) files.push(fake(`r/node_modules/p${i % 2000}/f${i}.js`));
+    for (let i = 0; i < 20_000; i++) files.push(fake(`r/src/d${i % 1000}/f${i}.ts`));
+    const src = fromFileList(files);
+    const t0 = performance.now();
+    const found = await scan(src, { ignoredDirs: ['node_modules'] });
+    expect(found).toHaveLength(20_000);
+    // Com o índice varrido a cada list(), isto levava ~5 s aqui; indexado, uma fração disso.
+    expect(performance.now() - t0).toBeLessThan(1500);
   });
 });
 
