@@ -263,6 +263,26 @@ describe('toggle', () => {
   });
 });
 
+describe('toggle com recolhimento superado', () => {
+  it('o recolhimento descartado ainda move a seleção para o grupo', async () => {
+    const { api, store } = await ready(makeApi([0, 5]));
+    await store.getState().select(9);
+    const g1 = deferred<VisibleGraph>();
+    const g2 = deferred<VisibleGraph>();
+    api.view.mockImplementationOnce(() => g1.promise).mockImplementationOnce(() => g2.promise);
+    const collapse = store.getState().toggle(5);
+    const expand = store.getState().toggle(7);
+    g2.resolve(graphFor([0, 7]));
+    await expand;
+    g1.resolve(graphFor([0]));
+    await collapse;
+    expect(store.getState().graph).toEqual(graphFor([0, 7]));
+    expect(store.getState().selected).toBe(5);
+    expect(api.detail).toHaveBeenLastCalledWith(5);
+    expect(store.getState().detail).toMatchObject({ id: 5 });
+  });
+});
+
 describe('select', () => {
   it('carrega o detail e select(null) limpa', async () => {
     const { store } = await ready();

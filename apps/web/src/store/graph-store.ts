@@ -113,12 +113,15 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
   let generation = 0;
   let viewSeq = 0;
   let detailSeq = 0;
+  /** Grupos recolhidos cujo resultado ainda não pousou; candidatos à seleção órfã. */
+  let collapsedPending: number[] = [];
 
   /** Encerra a execução atual: invalida respostas pendentes e descarta o cliente. */
   const teardown = () => {
     generation++;
     viewSeq++;
     detailSeq++;
+    collapsedPending = [];
     abort?.abort();
     abort = null;
     unsubCrash?.();
@@ -162,6 +165,13 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
         const graph = await c.view(expanded);
         if (gen !== generation || my !== viewSeq) return false;
         set({ graph });
+        const { selected } = get();
+        const candidates = collapsedPending;
+        collapsedPending = [];
+        if (selected !== null && !graph.nodes.some((n) => n.id === selected)) {
+          const target = candidates.find((id) => graph.nodes.some((n) => n.id === id));
+          if (target !== undefined) await loadDetail(target);
+        }
         return true;
       } catch (e) {
         fail(gen, message(e));
@@ -264,10 +274,8 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
       async toggle(id) {
         const { expanded, graph } = get();
         if (expanded.includes(id)) {
-          const ok = await applyView(expanded.filter((x) => x !== id));
-          if (!ok) return;
-          const { selected, graph: g } = get();
-          if (selected !== null && !g.nodes.some((n) => n.id === selected)) await get().select(id);
+          collapsedPending.push(id);
+          await applyView(expanded.filter((x) => x !== id));
           return;
         }
         const node = graph.nodes.find((n) => n.id === id);
