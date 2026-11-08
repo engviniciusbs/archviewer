@@ -94,14 +94,17 @@ impl Analyzer {
         let (packages, ws_warnings) = detect_workspaces(&self.configs, &dirs);
         let (resolver, res_warnings) = ResolverSet::build(&code_paths, &self.configs, &packages);
 
+        let graph = Graph::build(&self.config.project_name, code, &resolver, &packages);
         let mut warnings: Vec<String> = Vec::new();
-        for w in ws_warnings.into_iter().chain(res_warnings) {
+        for w in ws_warnings
+            .into_iter()
+            .chain(res_warnings)
+            .chain(resolver.take_warnings())
+        {
             if !warnings.contains(&w) {
                 warnings.push(w);
             }
         }
-
-        let graph = Graph::build(&self.config.project_name, code, &resolver, &packages);
         let count = |k: NodeKind| graph.nodes.iter().filter(|n| n.kind == k).count() as u32;
         let parse_errors = graph
             .nodes
@@ -387,6 +390,48 @@ mod tests {
                 .cycles,
             1
         );
+    }
+
+    #[test]
+    fn resolver_tsconfig_fallback_warning_reaches_summary() {
+        let a = analyzed(&[
+            ("tsconfig.json", r#"{"extends":"./tsconfig.base.json"}"#),
+            ("tsconfig.base.json", r#"{"extends":"./tsconfig.json"}"#),
+            ("src/a.ts", "import './b';"),
+            ("src/b.ts", ""),
+        ]);
+        let s = a.clone_summary();
+        assert_eq!(s.edges, 1);
+        assert_eq!(
+            s.warnings,
+            vec!["tsconfig ignorado na resolução: tsconfig.json"]
+        );
+        assert_eq!(a.issues().warnings, s.warnings);
+    }
+
+    #[test]
+    fn vite_references_project_has_edges() {
+        let a = analyzed(&[
+            (
+                "tsconfig.json",
+                r#"{"files":[],"references":[{"path":"./tsconfig.node.json"},{"path":"./tsconfig.app.json"}]}"#,
+            ),
+            (
+                "tsconfig.node.json",
+                r#"{"extends":"@tsconfig/node22/tsconfig.json","include":["vite.config.ts"]}"#,
+            ),
+            (
+                "tsconfig.app.json",
+                r#"{"extends":"@vue/tsconfig/tsconfig.dom.json","include":["src/**/*"],"compilerOptions":{"paths":{"@/*":["./src/*"]}}}"#,
+            ),
+            ("vite.config.ts", "import 'vite';"),
+            ("src/a.ts", "import './b'; import '@/c';"),
+            ("src/b.ts", ""),
+            ("src/c.ts", ""),
+        ]);
+        let s = a.clone_summary();
+        assert!(s.warnings.is_empty(), "{:?}", s.warnings);
+        assert_eq!((s.edges, s.unresolved), (3, 0));
     }
 
     #[test]
