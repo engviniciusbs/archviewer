@@ -753,8 +753,10 @@
 .statusbar__warnings {
   display: grid;
   gap: var(--space-2xs);
+  max-height: 20dvh;
   margin: 0;
   padding: 0 0 var(--space-xs);
+  overflow: auto;
   list-style: none;
 }
 
