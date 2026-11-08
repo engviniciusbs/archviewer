@@ -233,9 +233,7 @@ mod tests {
             &[
                 (
                     "pnpm-workspace.yaml",
-                    "packages:
-  - 'packages/*'
-",
+                    "packages:\r\n  - 'packages/*'\r\n",
                 ),
                 ("packages/a/package.json", r#"{"name":"a"}"#),
             ],

@@ -16,7 +16,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Rust tests
+      - name: Core tests (wasm feature off)
+        run: cargo test -p archviewer-core
+      - name: Workspace tests
         run: cargo test --workspace
 
       - name: Perf check (20k files)

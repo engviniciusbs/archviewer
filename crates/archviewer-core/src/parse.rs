@@ -396,9 +396,7 @@ mod tests {
     fn crlf_input_counts_lines_and_reports_error_line() {
         let parsed = parse_source(
             "a.ts",
-            "const a = 1;
-const = ;
-",
+            "const a = 1;\r\nconst = ;\r\n",
         );
         assert_eq!(parsed.loc, 2);
         assert_eq!(parsed.errors[0].line, 2);
