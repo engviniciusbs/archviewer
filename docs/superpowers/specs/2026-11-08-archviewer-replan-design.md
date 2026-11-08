@@ -43,7 +43,7 @@ ArchViewer é uma ferramenta open source, 100% no navegador, que abre a pasta de
 | Renderização | Sigma.js + graphology (WebGL), layout ForceAtlas2 em worker | Escala para dezenas de milhares de nós |
 | Estado | Zustand | Store simples, fora da árvore do React |
 | IA (v2) | Chave própria (BYOK) direto do navegador; um proxy hospedado é possível depois | Sem servidor agora; a interface `LLMProvider` já comporta um proxy |
-| Visual | Skill Hallmark, tema **Grid** | Pedido do usuário |
+| Visual | Skill Hallmark, tema **Cobalt** | Pedido do usuário; é o tema do Hallmark para ferramentas de desenvolvedor |
 | Navegadores | Chrome/Edge completos; Firefox/Safari via `webkitdirectory` com aviso | File System Access API |
 
 ## 3. Arquitetura
@@ -130,20 +130,35 @@ O layout tem cinco áreas: toolbar, explorador à esquerda, grafo ao centro, det
   - Para um grupo: totais e as maiores dependências de entrada e de saída.
 - **Barra de status:** progresso da leitura. Depois, o resumo: arquivos, arestas, ciclos, não resolvidos (clicável, abre a lista com os motivos), ignorados e tempo.
 
-### Visual: Hallmark, tema Grid
+### Visual: Hallmark, tema Cobalt
 
 - **Fluxo:** a implementação da UI segue a skill Hallmark (`~/.agents/skills/hallmark`) no modo **App screens** (`references/flow.md` § App screens).
-- **Tokens:** `tokens.css` e `base.css` são regenerados com `theme.mjs scaffold grid`. Stamp: `theme: grid (by request)`.
+- **Tokens:** `tokens.css` e `base.css` são regenerados com `theme.mjs scaffold cobalt`. Stamp: `theme: cobalt (by request)`.
+- **Por que Cobalt:**
+  - é o tema do gênero modern-minimal voltado para ferramentas de desenvolvedor
+  - permite JetBrains Mono para valores técnicos
+  - usa linhas finas, o que serve a uma tela densa
+  - tem painéis grafite para código
 - **Tradução do tema para o app:**
-  - Fundo do grafo: `--color-paper`. Nós e arestas em tinta (`--color-ink`, `--color-muted`). Grupos como blocos de tom (`--color-paper-2`/`--color-paper-3`), sem contorno.
-  - **Seleção:** vermelho suíço (`--color-mark`). Ele não é usado para mais nada além de seleção, hover e no máximo uma área.
-  - **Ciclos:** ultramarino (`--color-accent`), tracejado.
-  - **Toolbar:** a área ultramarina (`.field`).
-  - **Separação entre painéis:** espaço e tom de papel, nunca linhas.
-  - **Painel de detalhes:** nome do item em tamanho de display; fan-in/fan-out como números grandes em Radio Canada Big. É a assinatura visual.
-  - **Caminhos de arquivo:** Radio Canada com números tabulares. Sem fonte mono.
-  - **Controles:** raio 0, sem sombra. Primário: bloco de tinta. Secundário: sublinhado que fica vermelho no hover.
-  - **Movimento:** só mudança de estado.
+  - **Fundo do grafo:** `--color-paper`. Nós e arestas em `--color-ink`/`--color-muted`. Grupos como painéis com cantos cortados (`.cut`), linha `--color-rule` e fundo `--color-paper-2`.
+  - **Seleção:** cobalto (`--color-accent`), com destaque em `--color-accent-wash`. O cobalto fica abaixo de 5% da tela.
+  - **Ciclos:** `--color-error`, tracejados. Se o scaffold do Cobalt não emitir esse token, ele é declarado no bloco de tokens seguindo o padrão do Hallmark para modern-minimal: `oklch(52% 0.19 27)`.
+  - **Fontes:**
+    - Familjen Grotesk em títulos, rótulos e cabeçalhos de painel (nunca mono nesses lugares)
+    - IBM Plex Sans no corpo
+    - JetBrains Mono em caminhos, specifiers e valores técnicos
+  - **Painel de detalhes:**
+    - nome do item
+    - fan-in/fan-out como números grandes em Familjen 600, com algarismos tabulares (a assinatura visual)
+    - um painel grafite (`.graphite`) com o trecho do arquivo e os imports destacados em `--color-accent-2`
+  - **Toolbar:** botões keycap (`.key`); "Abrir projeto" é a única tecla primária, em cobalto. Os filtros são teclas numa bandeja `--color-paper-3`, com a ativa afundada.
+  - **Campo ASCII:**
+    - **Onde:** só na tela de leitura e análise, nunca atrás do grafo.
+    - **O que mostra:** dados reais do processo. Arquivos chegando "crus" de um lado e resolvidos do outro, com densidade proporcional ao progresso real.
+    - **Como roda:** canvas a 30 fps, pausado fora da tela.
+    - **Fallbacks:** imagem parada sob `prefers-reduced-motion`; grade de pontos sem JavaScript.
+  - **Status:** texto com um ícone, nunca um chip preenchido.
+  - **Movimento:** teclas em `--dur-micro`. Fora isso, só o layout do grafo se move.
 - **Regras obrigatórias do Hallmark que se aplicam aqui:**
   - toda cor e toda fonte vêm de tokens
   - `:focus-visible` em todo controle
