@@ -34,6 +34,8 @@ export interface GraphState {
   detail: Detail | null;
   filters: Filters;
   focusRequest: { id: number; seq: number } | null;
+  /** Busca ativa, compartilhada entre a toolbar e o explorador; null = sem busca. */
+  searchResults: SearchResults | null;
   openProject(source: DirSource, fallback: boolean): Promise<void>;
   confirmLarge(proceed: boolean): void;
   cancel(): void;
@@ -41,13 +43,19 @@ export interface GraphState {
   select(id: number | null): Promise<void>;
   reveal(hit: SearchHit): Promise<void>;
   setFilter<K extends keyof Filters>(k: K, v: boolean): void;
+  /** Busca no cliente atual; [] sem projeto pronto, com busca vazia ou em falha. */
+  search(query: string): Promise<SearchHit[]>;
+  setSearchResults(r: SearchResults | null): void;
   reset(): void;
 }
+
+export type SearchResults = { query: string; hits: SearchHit[] };
 
 const LARGE_PROJECT = 10_000;
 const MAX_FILE_BYTES = 2_097_152;
 const BATCH_FILES = 200;
 const BATCH_BYTES = 4_194_304;
+const SEARCH_LIMIT = 50;
 
 const emptyGraph = (): VisibleGraph => ({ nodes: [], edges: [] });
 const union = (a: number[], b: number[]) => [...new Set([...a, ...b])].sort((x, y) => x - y);
@@ -80,6 +88,8 @@ type DataState = Omit<
   | 'select'
   | 'reveal'
   | 'setFilter'
+  | 'search'
+  | 'setSearchResults'
   | 'reset'
   | 'filters'
 >;
@@ -101,6 +111,7 @@ const initialData = (): DataState => ({
   selected: null,
   detail: null,
   focusRequest: null,
+  searchResults: null,
 });
 
 export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => number }): StoreApi<GraphState> {
@@ -298,6 +309,21 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
         const filters = { ...get().filters, [k]: v };
         set({ filters });
         writeUrl(filters);
+      },
+
+      async search(query) {
+        const q = query.trim();
+        const c = client;
+        if (!q || !c || get().phase !== 'ready') return [];
+        try {
+          return await c.find(q, SEARCH_LIMIT);
+        } catch {
+          return [];
+        }
+      },
+
+      setSearchResults(r) {
+        set({ searchResults: r });
       },
 
       reset() {

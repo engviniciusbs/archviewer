@@ -340,3 +340,43 @@ describe('setFilter', () => {
     expect(window.location.search).toBe('');
   });
 });
+
+describe('search', () => {
+  const hit: SearchHit = { id: 9, kind: 'file', label: 'n9', path: 'n9', ancestors: [0, 5] };
+
+  it('devolve [] sem projeto aberto e não chama find', async () => {
+    const api = makeApi();
+    const store = createGraphStore({ api: () => asApi(api) });
+    expect(await store.getState().search('n9')).toEqual([]);
+    expect(api.find).not.toHaveBeenCalled();
+  });
+
+  it('em ready, chama find do cliente atual com a busca aparada', async () => {
+    const api = makeApi();
+    api.find.mockResolvedValue([hit]);
+    const { store } = await ready(api);
+    expect(await store.getState().search('  n9 ')).toEqual([hit]);
+    expect(api.find).toHaveBeenCalledWith('n9', 50);
+  });
+
+  it('busca vazia devolve [] sem chamar find', async () => {
+    const { api, store } = await ready();
+    expect(await store.getState().search('   ')).toEqual([]);
+    expect(api.find).not.toHaveBeenCalled();
+  });
+
+  it('falha do find devolve []', async () => {
+    const api = makeApi();
+    api.find.mockRejectedValue(new Error('boom'));
+    const { store } = await ready(api);
+    expect(await store.getState().search('n9')).toEqual([]);
+  });
+
+  it('setSearchResults guarda os resultados e reset limpa', async () => {
+    const { store } = await ready();
+    store.getState().setSearchResults({ query: 'n9', hits: [hit] });
+    expect(store.getState().searchResults).toEqual({ query: 'n9', hits: [hit] });
+    store.getState().reset();
+    expect(store.getState().searchResults).toBeNull();
+  });
+});
