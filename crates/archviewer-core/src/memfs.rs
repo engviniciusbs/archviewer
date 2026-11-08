@@ -27,11 +27,14 @@ pub fn to_virtual(rel: &str) -> PathBuf {
 /// the path is outside the virtual root.
 pub fn from_virtual(p: &Path) -> Option<String> {
     let rest = p.strip_prefix(ROOT).ok()?;
-    let segs: Vec<&str> = rest.components().map(|c| c.as_os_str().to_str()).collect::<Option<_>>()?;
+    let segs: Vec<&str> = rest
+        .components()
+        .map(|c| c.as_os_str().to_str())
+        .collect::<Option<_>>()?;
     Some(segs.join("/"))
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct MemoryFs {
     /// Files by relative path; code files have empty content.
     files: HashMap<String, String>,
@@ -98,7 +101,10 @@ impl MemoryFs {
 }
 
 fn not_found(p: &Path) -> io::Error {
-    io::Error::new(io::ErrorKind::NotFound, format!("not found: {}", p.display()))
+    io::Error::new(
+        io::ErrorKind::NotFound,
+        format!("not found: {}", p.display()),
+    )
 }
 
 impl FileSystem for MemoryFs {
@@ -111,7 +117,9 @@ impl FileSystem for MemoryFs {
     }
 
     fn read_to_string(&self, path: &Path) -> io::Result<String> {
-        self.follow(path).and_then(|r| self.files.get(&r).cloned()).ok_or_else(|| not_found(path))
+        self.follow(path)
+            .and_then(|r| self.files.get(&r).cloned())
+            .ok_or_else(|| not_found(path))
     }
 
     fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
@@ -138,11 +146,15 @@ impl FileSystem for MemoryFs {
         from_virtual(path)
             .and_then(|rel| self.links.get(&rel))
             .map(|target| to_virtual(target))
-            .ok_or_else(|| ResolveError::from(io::Error::new(io::ErrorKind::InvalidInput, "not a symlink")))
+            .ok_or_else(|| {
+                ResolveError::from(io::Error::new(io::ErrorKind::InvalidInput, "not a symlink"))
+            })
     }
 
     fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
-        self.follow(path).map(|r| to_virtual(&r)).ok_or_else(|| not_found(path))
+        self.follow(path)
+            .map(|r| to_virtual(&r))
+            .ok_or_else(|| not_found(path))
     }
 }
 
@@ -150,22 +162,61 @@ impl FileSystem for MemoryFs {
 mod tests {
     use super::*;
     use std::collections::{HashMap, HashSet};
-    #[test] fn resolver_over_memfs() {
-        let code: HashSet<String> = ["src/a.ts","src/b/index.tsx","src/lib/math.ts","src/util.ts","packages/ui/src/index.ts"].map(String::from).into();
+    #[test]
+    fn resolver_over_memfs() {
+        let code: HashSet<String> = [
+            "src/a.ts",
+            "src/b/index.tsx",
+            "src/lib/math.ts",
+            "src/util.ts",
+            "packages/ui/src/index.ts",
+        ]
+        .map(String::from)
+        .into();
         let configs = HashMap::from([
-            ("tsconfig.json".into(), r#"{ // jsonc
-                "extends": "./tsconfig.base.json", }"#.into()),
-            ("tsconfig.base.json".into(), r#"{"compilerOptions":{"baseUrl":".","paths":{"@lib/*":["src/lib/*"]}}}"#.into()),
-            ("packages/ui/package.json".into(), r#"{"name":"@acme/ui","exports":{".":"./src/index.ts"}}"#.into()),
+            (
+                "tsconfig.json".into(),
+                r#"{ // jsonc
+                "extends": "./tsconfig.base.json", }"#
+                    .into(),
+            ),
+            (
+                "tsconfig.base.json".into(),
+                r#"{"compilerOptions":{"baseUrl":".","paths":{"@lib/*":["src/lib/*"]}}}"#.into(),
+            ),
+            (
+                "packages/ui/package.json".into(),
+                r#"{"name":"@acme/ui","exports":{".":"./src/index.ts"}}"#.into(),
+            ),
         ]);
-        let fs = MemoryFs::new(&code, &configs, &[("node_modules/@acme/ui".into(), "packages/ui".into())]);
-        let r = oxc_resolver::ResolverGeneric::new_with_file_system(fs, oxc_resolver::ResolveOptions {
-            extensions: vec![".ts".into(), ".tsx".into(), ".js".into()],
-            extension_alias: vec![(".js".into(), vec![".ts".into(), ".tsx".into(), ".js".into()])],
-            condition_names: vec!["types".into(), "import".into(), "require".into(), "default".into()],
-            tsconfig: Some(oxc_resolver::TsconfigDiscovery::Manual(oxc_resolver::TsconfigOptions { config_file: to_virtual("tsconfig.json"), references: oxc_resolver::TsconfigReferences::Auto })),
-            ..Default::default()
-        });
+        let fs = MemoryFs::new(
+            &code,
+            &configs,
+            &[("node_modules/@acme/ui".into(), "packages/ui".into())],
+        );
+        let r = oxc_resolver::ResolverGeneric::new_with_file_system(
+            fs,
+            oxc_resolver::ResolveOptions {
+                extensions: vec![".ts".into(), ".tsx".into(), ".js".into()],
+                extension_alias: vec![(
+                    ".js".into(),
+                    vec![".ts".into(), ".tsx".into(), ".js".into()],
+                )],
+                condition_names: vec![
+                    "types".into(),
+                    "import".into(),
+                    "require".into(),
+                    "default".into(),
+                ],
+                tsconfig: Some(oxc_resolver::TsconfigDiscovery::Manual(
+                    oxc_resolver::TsconfigOptions {
+                        config_file: to_virtual("tsconfig.json"),
+                        references: oxc_resolver::TsconfigReferences::Auto,
+                    },
+                )),
+                ..Default::default()
+            },
+        );
         let dir = to_virtual("src");
         let ok = |s: &str| from_virtual(r.resolve(&dir, s).unwrap().path()).unwrap();
         assert_eq!(ok("./b"), "src/b/index.tsx");
