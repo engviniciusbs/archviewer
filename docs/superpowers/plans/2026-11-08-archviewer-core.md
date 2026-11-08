@@ -201,7 +201,7 @@ git commit -m "feat(core): cargo workspace, path rules and in-memory fs for oxc_
     - `DepRef { id: NodeId, path: String, kind: ImportKind, specifiers: Vec<String> }`
     - `WeightedRef { id: NodeId, path: String, weight: u32 }`
     - `FileDetail { id, path, language: Language, loc: u32, exports: Vec<String>, imports: Vec<DepRef>, imported_by: Vec<DepRef>, unresolved: Vec<UnresolvedImport>, cycle: Vec<String>, fan_in: u32, fan_out: u32, parse_errors: Vec<ParseError> }`
-    - `GroupDetail { id, path, label, kind: GroupKind, file_count: u32, loc: u32, in_cycle: bool, top_outgoing: Vec<WeightedRef>, top_incoming: Vec<WeightedRef> }`
+    - `GroupDetail { id, path, label, group_kind: GroupKind, file_count: u32, loc: u32, in_cycle: bool, top_outgoing: Vec<WeightedRef>, top_incoming: Vec<WeightedRef> }`
     - `ExternalDetail { id, name: String, imported_by: Vec<DepRef> }`
     - `Detail` = enum com `#[serde(tag = "kind", rename_all = "camelCase")]`: `File(FileDetail) | Group(GroupDetail) | External(ExternalDetail)`
   - **Busca:** `SearchHit { id: NodeId, kind: NodeKind, label: String, path: String, ancestors: Vec<NodeId> }`
