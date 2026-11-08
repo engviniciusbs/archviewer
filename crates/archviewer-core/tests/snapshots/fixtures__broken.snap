@@ -20,11 +20,21 @@ expression: s.value
   "default": {
     "nodes": [
       {
+        "path": "",
+        "label": "broken",
+        "kind": "group",
+        "size": 2,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "src",
         "label": "src",
         "kind": "group",
         "size": 2,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true
@@ -63,11 +73,21 @@ expression: s.value
   "full": {
     "nodes": [
       {
+        "path": "",
+        "label": "broken",
+        "kind": "group",
+        "size": 2,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "src",
         "label": "src",
         "kind": "group",
         "size": 2,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true

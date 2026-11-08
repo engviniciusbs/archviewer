@@ -18,11 +18,21 @@ expression: s.value
   "default": {
     "nodes": [
       {
+        "path": "",
+        "label": "monorepo-pnpm",
+        "kind": "group",
+        "size": 5,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "apps",
         "label": "apps",
         "kind": "group",
         "size": 1,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true
@@ -42,7 +52,7 @@ expression: s.value
         "label": "packages",
         "kind": "group",
         "size": 3,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true
@@ -72,7 +82,7 @@ expression: s.value
         "label": "scripts",
         "kind": "group",
         "size": 1,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": false
@@ -115,11 +125,21 @@ expression: s.value
   "full": {
     "nodes": [
       {
+        "path": "",
+        "label": "monorepo-pnpm",
+        "kind": "group",
+        "size": 5,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "apps",
         "label": "apps",
         "kind": "group",
         "size": 1,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true
@@ -149,7 +169,7 @@ expression: s.value
         "label": "packages",
         "kind": "group",
         "size": 3,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true
@@ -199,7 +219,7 @@ expression: s.value
         "label": "scripts",
         "kind": "group",
         "size": 1,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true

@@ -18,11 +18,21 @@ expression: s.value
   "default": {
     "nodes": [
       {
+        "path": "",
+        "label": "commonjs",
+        "kind": "group",
+        "size": 4,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "lib",
         "label": "lib",
         "kind": "group",
         "size": 2,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": false
@@ -32,7 +42,7 @@ expression: s.value
         "label": "a.js",
         "kind": "file",
         "size": 2,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": false,
         "expanded": false
@@ -42,7 +52,7 @@ expression: s.value
         "label": "index.js",
         "kind": "file",
         "size": 7,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": false,
         "expanded": false
@@ -75,11 +85,21 @@ expression: s.value
   "full": {
     "nodes": [
       {
+        "path": "",
+        "label": "commonjs",
+        "kind": "group",
+        "size": 4,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "lib",
         "label": "lib",
         "kind": "group",
         "size": 2,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true
@@ -89,7 +109,7 @@ expression: s.value
         "label": "a.js",
         "kind": "file",
         "size": 2,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": false,
         "expanded": false
@@ -99,7 +119,7 @@ expression: s.value
         "label": "index.js",
         "kind": "file",
         "size": 7,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": false,
         "expanded": false

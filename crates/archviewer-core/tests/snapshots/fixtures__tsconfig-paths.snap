@@ -18,11 +18,21 @@ expression: s.value
   "default": {
     "nodes": [
       {
+        "path": "",
+        "label": "tsconfig-paths",
+        "kind": "group",
+        "size": 3,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "src",
         "label": "src",
         "kind": "group",
         "size": 3,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true
@@ -78,11 +88,21 @@ expression: s.value
   "full": {
     "nodes": [
       {
+        "path": "",
+        "label": "tsconfig-paths",
+        "kind": "group",
+        "size": 3,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
         "path": "src",
         "label": "src",
         "kind": "group",
         "size": 3,
-        "parent": null,
+        "parent": "",
         "inCycle": false,
         "expandable": true,
         "expanded": true

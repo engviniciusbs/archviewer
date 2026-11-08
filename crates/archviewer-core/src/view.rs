@@ -78,7 +78,9 @@ impl Analyzer {
         // One top-down pass: representative (highest collapsed ancestor, or self),
         // visibility, and a traversal order for bottom-up accumulation.
         let mut rep: Vec<NodeId> = (0..n as NodeId).collect();
+        // The root group is always visible (and expanded).
         let mut visible = vec![false; n];
+        visible[0] = true;
         let mut order: Vec<NodeId> = Vec::with_capacity(n);
         let mut stack: Vec<(NodeId, Option<NodeId>)> = vec![(0, None)];
         while let Some((id, hidden_by)) = stack.pop() {
@@ -165,7 +167,7 @@ impl Analyzer {
 #[cfg(test)]
 mod tests {
     use crate::analyzer::{analyzed, id, Analyzer};
-    use crate::model::AnalyzerConfig;
+    use crate::model::{AnalyzerConfig, NodeKind};
 
     #[test]
     fn collapses_single_child_chain() {
@@ -238,6 +240,48 @@ mod tests {
         let a = analyzed(&[("README.md", "")]);
         assert_eq!(a.clone_summary().files, 0);
         assert_eq!(a.default_expansion(), vec![0]);
-        assert!(a.view(&[0]).nodes.is_empty());
+        let v = a.view(&[0]);
+        assert_eq!(v.nodes.iter().map(|n| n.id).collect::<Vec<_>>(), vec![0]);
+        assert!(!v.nodes[0].expandable && v.nodes[0].expanded);
+    }
+    #[test]
+    fn root_group_is_visible_and_parents_exist() {
+        let mut a = Analyzer::new(AnalyzerConfig {
+            project_name: "demo".into(),
+            ..Default::default()
+        });
+        a.add_files(vec![
+            crate::model::FileInput {
+                path: "src/a.ts".into(),
+                content: "import './b'; import 'react';".into(),
+            },
+            crate::model::FileInput {
+                path: "src/b.ts".into(),
+                content: String::new(),
+            },
+            crate::model::FileInput {
+                path: "c.ts".into(),
+                content: String::new(),
+            },
+        ])
+        .unwrap();
+        a.finish().unwrap();
+        for exp in [a.default_expansion(), vec![0]] {
+            let v = a.view(&exp);
+            let root = v.nodes.iter().find(|n| n.id == 0).expect("root node");
+            assert_eq!(
+                (root.label.as_str(), root.path.as_str(), root.parent_id),
+                ("demo", "", None)
+            );
+            assert!(root.expanded && root.expandable);
+            assert_eq!(root.size, 3);
+            let ids: Vec<_> = v.nodes.iter().map(|n| n.id).collect();
+            for n in &v.nodes {
+                if n.id != 0 && n.kind != NodeKind::External {
+                    let p = n.parent_id.expect("non-root node has a parent");
+                    assert!(ids.contains(&p), "parent {p} of {} not in view", n.path);
+                }
+            }
+        }
     }
 }
