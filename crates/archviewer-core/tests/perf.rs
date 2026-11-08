@@ -25,10 +25,10 @@ fn twenty_thousand_files_under_five_seconds() {
         }
     }
 
+    // Timed from ingestion (parsing happens in add_files) to the full view.
+    let t = Instant::now();
     let mut a = Analyzer::new(AnalyzerConfig::default());
     a.add_files(files).unwrap();
-
-    let t = Instant::now();
     let summary = a.finish().unwrap();
     let default = a.view(&a.default_expansion());
     let mut ids = a.default_expansion();
@@ -56,5 +56,7 @@ fn twenty_thousand_files_under_five_seconds() {
         full.edges.len()
     );
     assert_eq!(summary.files, 20_000);
+    // 3 internal imports + `react` per file, all distinct targets.
+    assert_eq!(summary.edges, 80_000);
     assert!(elapsed.as_secs_f64() < 5.0, "took {elapsed:?}");
 }
