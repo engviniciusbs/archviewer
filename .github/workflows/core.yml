@@ -1,4 +1,4 @@
-name: core
+name: ci
 
 on:
   push:
@@ -52,3 +52,14 @@ jobs:
 
       - name: Build and test core-wasm
         run: pnpm --filter @archviewer/core-wasm build && pnpm --filter @archviewer/core-wasm test
+
+      - name: Web typecheck
+        run: pnpm --filter @archviewer/web typecheck
+      - name: Web lint
+        run: pnpm --filter @archviewer/web lint
+      - name: Web unit tests
+        run: pnpm --filter @archviewer/web test
+      - name: Install Playwright Chromium
+        run: pnpm --filter @archviewer/web exec playwright install --with-deps chromium
+      - name: Web e2e
+        run: pnpm --filter @archviewer/web e2e
