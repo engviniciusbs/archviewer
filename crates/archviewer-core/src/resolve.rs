@@ -4,6 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 
+use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 use oxc_resolver::{
     ResolveError, ResolveOptions, ResolverGeneric, TsconfigDiscovery, TsconfigOptions,
     TsconfigReferences,
@@ -29,6 +30,7 @@ pub struct ResolverSet {
     fs: MemoryFs,
     /// tsconfig/jsconfig path -> analysis, or `None` when invalid.
     scopes: HashMap<String, Option<ScopeInfo>>,
+    /// Resolver per tsconfig actually used (scope root or referenced project).
     cache: Mutex<HashMap<Option<String>, Arc<Resolver>>>,
     fallback: Mutex<Fallback>,
 }
@@ -50,16 +52,40 @@ fn is_tsconfig_error(e: &ResolveError) -> bool {
     )
 }
 
+/// `paths` keys and sanitized contents collected along an `extends` chain.
+#[derive(Default)]
+struct Chain {
+    /// `paths` keys (own and inherited).
+    keys: Vec<String>,
+    /// Sanitized contents (unloadable `extends` removed) for chain files that had one.
+    overrides: Vec<(String, String)>,
+}
+
 /// Result of validating a tsconfig, its relative `extends` chain and its
 /// project `references`.
 struct ScopeInfo {
     /// `paths` keys (own, inherited and from references).
     keys: Vec<String>,
-    /// Sanitized contents (unloadable `extends` removed) for chain files that had one.
+    /// Overrides for the scope's own tsconfig chain.
     overrides: Vec<(String, String)>,
-    /// Whether every project reference was loadable; otherwise the resolver
-    /// for this scope ignores `references`.
-    references: bool,
+    /// Referenced projects, in order; empty when a reference could not be
+    /// loaded (references are then ignored for the scope).
+    projects: Vec<Project>,
+}
+
+/// A referenced tsconfig and the files it owns.
+struct Project {
+    config: String,
+    overrides: Vec<(String, String)>,
+    files: HashSet<String>,
+    include: GlobSet,
+    exclude: GlobSet,
+}
+
+impl Project {
+    fn owns(&self, file: &str) -> bool {
+        self.files.contains(file) || (self.include.is_match(file) && !self.exclude.is_match(file))
+    }
 }
 
 const MAX_EXTENDS_DEPTH: usize = 16;
@@ -110,7 +136,7 @@ fn analyze_chain(
     path: &str,
     configs: &HashMap<String, String>,
     stack: &mut Vec<String>,
-    info: &mut ScopeInfo,
+    info: &mut Chain,
     warnings: &mut Vec<String>,
 ) -> Option<serde_json::Value> {
     let value = parse_jsonc(configs.get(path)?)?;
@@ -167,6 +193,85 @@ fn analyze_chain(
     Some(value)
 }
 
+fn string_list(value: &serde_json::Value, key: &str) -> Option<Vec<String>> {
+    value.get(key).and_then(|v| v.as_array()).map(|a| {
+        a.iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect()
+    })
+}
+
+/// `files`, `include` and `exclude` of a tsconfig (project-relative), each
+/// inherited from the relative `extends` chain when not set (later bases win).
+type OwnFields = [Option<Vec<String>>; 3];
+
+fn own_fields(path: &str, configs: &HashMap<String, String>, depth: usize) -> OwnFields {
+    let Some(value) = configs.get(path).and_then(|c| parse_jsonc(c)) else {
+        return [None, None, None];
+    };
+    let dir = parent_dir(path);
+    let mut fields: OwnFields = ["files", "include", "exclude"]
+        .map(|k| string_list(&value, k).map(|l| l.iter().map(|p| join_rel(dir, p)).collect()));
+    let extends: Vec<String> = match value.get("extends") {
+        Some(serde_json::Value::String(s)) => vec![s.clone()],
+        Some(serde_json::Value::Array(a)) => a
+            .iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect(),
+        _ => Vec::new(),
+    };
+    if depth < MAX_EXTENDS_DEPTH {
+        for ext in extends.iter().rev().filter(|e| e.starts_with('.')) {
+            let Some(found) = find_config(&join_rel(dir, ext), configs) else {
+                continue;
+            };
+            let base = own_fields(&found, configs, depth + 1);
+            for (f, b) in fields.iter_mut().zip(base) {
+                if f.is_none() {
+                    *f = b;
+                }
+            }
+        }
+    }
+    fields
+}
+
+/// Glob set for tsconfig `include`/`exclude` patterns; a last segment
+/// without wildcard or extension names a folder.
+fn pattern_set(patterns: &[String]) -> GlobSet {
+    let mut b = GlobSetBuilder::new();
+    for p in patterns {
+        let last = p.rsplit('/').next().unwrap_or(p);
+        let glob = if last.contains(['*', '?', '.']) {
+            p.clone()
+        } else if p.is_empty() {
+            "**/*".to_string()
+        } else {
+            format!("{p}/**/*")
+        };
+        if let Ok(g) = GlobBuilder::new(&glob).literal_separator(true).build() {
+            b.add(g);
+        }
+    }
+    b.build().unwrap_or_else(|_| GlobSet::empty())
+}
+
+fn project(config: String, chain: Chain, configs: &HashMap<String, String>) -> Project {
+    let [files, include, exclude] = own_fields(&config, configs, 0);
+    let include = match (&files, include) {
+        (_, Some(i)) => i,
+        (Some(_), None) => Vec::new(),
+        (None, None) => vec![join_rel(parent_dir(&config), "**/*")],
+    };
+    Project {
+        files: files.unwrap_or_default().into_iter().collect(),
+        include: pattern_set(&include),
+        exclude: pattern_set(&exclude.unwrap_or_default()),
+        config,
+        overrides: chain.overrides,
+    }
+}
+
 /// Analyzes a scope's tsconfig and its project `references` (each a file or
 /// a folder holding `tsconfig.json`, sanitized like the root). `None` when
 /// the root itself is missing or not valid JSONC.
@@ -175,16 +280,12 @@ fn analyze_tsconfig(
     configs: &HashMap<String, String>,
     warnings: &mut Vec<String>,
 ) -> Option<ScopeInfo> {
-    let mut info = ScopeInfo {
-        keys: Vec::new(),
-        overrides: Vec::new(),
-        references: true,
-    };
+    let mut chain = Chain::default();
     let value = analyze_chain(
         path,
         configs,
         &mut vec![path.to_string()],
-        &mut info,
+        &mut chain,
         warnings,
     )?;
     let refs = value
@@ -192,37 +293,46 @@ fn analyze_tsconfig(
         .and_then(|r| r.as_array())
         .map(|a| a.as_slice())
         .unwrap_or_default();
-    let mut ref_info = ScopeInfo {
-        keys: Vec::new(),
-        overrides: Vec::new(),
-        references: true,
-    };
+    let mut projects = Vec::new();
     let mut ref_warnings = Vec::new();
+    let mut all_loaded = true;
     for r in refs {
         let Some(rel) = r.get("path").and_then(|p| p.as_str()) else {
-            continue; // malformed entry: left for the resolver's safety net
+            continue; // malformed entry: ignored, as references are resolved here
         };
         let target = join_rel(parent_dir(path), rel);
         let loaded = find_config(&target, configs)
             .filter(|found| found != path)
             .and_then(|found| {
+                let mut c = Chain::default();
                 analyze_chain(
                     &found,
                     configs,
                     &mut vec![found.clone()],
-                    &mut ref_info,
+                    &mut c,
                     &mut ref_warnings,
                 )
+                .map(|_| (found, c))
             });
-        if loaded.is_none() {
-            warnings.push(format!("referência de tsconfig não encontrada: {target}"));
-            info.references = false;
+        match loaded {
+            Some((found, c)) => projects.push((found, c)),
+            None => {
+                warnings.push(format!("referência de tsconfig não encontrada: {target}"));
+                all_loaded = false;
+            }
         }
     }
-    if info.references {
-        info.keys.extend(ref_info.keys);
-        info.overrides.extend(ref_info.overrides);
+    let mut info = ScopeInfo {
+        keys: chain.keys,
+        overrides: chain.overrides,
+        projects: Vec::new(),
+    };
+    if all_loaded {
         warnings.extend(ref_warnings);
+        for (found, c) in projects {
+            info.keys.extend(c.keys.iter().cloned());
+            info.projects.push(project(found, c, configs));
+        }
     }
     Some(info)
 }
@@ -316,13 +426,11 @@ impl ResolverSet {
         })
     }
 
-    /// Resolver for a usable scope (`None`: without tsconfig).
-    fn resolver_for(&self, usable: Option<&str>) -> Arc<Resolver> {
-        let info = usable
-            .and_then(|s| self.scopes.get(s))
-            .and_then(|i| i.as_ref());
-        let overrides = info.map(|i| &i.overrides);
-        let key = usable.map(String::from);
+    /// Resolver using `config` (`None`: without tsconfig), whose chain
+    /// files read as `overrides`. References are never followed by the
+    /// resolver: `config_for` already picked the owning project.
+    fn resolver_for(&self, config: Option<&str>, overrides: &[(String, String)]) -> Arc<Resolver> {
+        let key = config.map(String::from);
         let mut cache = self.cache.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(r) = cache.get(&key) {
             return r.clone();
@@ -345,25 +453,33 @@ impl ResolverSet {
             condition_names: ["source", "import", "require", "default"]
                 .map(String::from)
                 .into(),
-            tsconfig: usable.map(|s| {
+            tsconfig: config.map(|c| {
                 TsconfigDiscovery::Manual(TsconfigOptions {
-                    config_file: to_virtual(s),
-                    references: if info.is_some_and(|i| i.references) {
-                        TsconfigReferences::Auto
-                    } else {
-                        TsconfigReferences::Disabled
-                    },
+                    config_file: to_virtual(c),
+                    references: TsconfigReferences::Disabled,
                 })
             }),
             ..Default::default()
         };
         let mut fs = self.fs.clone();
-        for (path, content) in overrides.into_iter().flatten() {
+        for (path, content) in overrides {
             fs = fs.with_override(path, content.clone());
         }
         let r = Arc::new(ResolverGeneric::new_with_file_system(fs, options));
         cache.insert(key, r.clone());
         r
+    }
+
+    /// The tsconfig for `file` in a usable scope: the first referenced
+    /// project that owns it, else the scope's own tsconfig.
+    fn config_for<'a>(&'a self, scope: &'a str, file: &str) -> (&'a str, &'a [(String, String)]) {
+        match self.scopes.get(scope) {
+            Some(Some(info)) => match info.projects.iter().find(|p| p.owns(file)) {
+                Some(p) => (&p.config, &p.overrides),
+                None => (scope, &info.overrides),
+            },
+            _ => (scope, &[]),
+        }
     }
 
     /// Warnings produced while resolving (tsconfigs ignored by the safety net).
@@ -372,17 +488,27 @@ impl ResolverSet {
         std::mem::take(&mut fallback.warnings)
     }
 
-    /// Resolves with the scope's tsconfig (or the referenced project that
-    /// includes `file`); a tsconfig failure inside the resolver retries
-    /// without it and disables the tsconfig for the scope.
+    /// Resolves with the tsconfig owning `file`; a tsconfig failure inside
+    /// the resolver retries without it and disables the tsconfig for the scope.
     fn resolve_path(
         &self,
         scope: Option<&str>,
-        file: &std::path::Path,
+        file: &str,
         specifier: &str,
     ) -> Option<std::path::PathBuf> {
         let usable = self.usable_scope(scope);
-        match self.resolver_for(usable).resolve_file(file, specifier) {
+        let (config, overrides) = match usable {
+            Some(s) => {
+                let (c, o) = self.config_for(s, file);
+                (Some(c), o)
+            }
+            None => (None, &[][..]),
+        };
+        let dir = to_virtual(parent_dir(file));
+        match self
+            .resolver_for(config, overrides)
+            .resolve(&dir, specifier)
+        {
             Ok(res) => Some(res.path().to_path_buf()),
             Err(e) if usable.is_some() && is_tsconfig_error(&e) => {
                 let s = usable.unwrap_or_default();
@@ -394,8 +520,8 @@ impl ResolverSet {
                             .push(format!("tsconfig ignorado na resolução: {s}"));
                     }
                 }
-                self.resolver_for(None)
-                    .resolve_file(file, specifier)
+                self.resolver_for(None, &[])
+                    .resolve(&dir, specifier)
                     .ok()
                     .map(|res| res.path().to_path_buf())
             }
@@ -412,8 +538,7 @@ impl ResolverSet {
         }
         let from_file = crate::paths::normalize(from_file);
         let scope = self.scope_of(&from_file);
-        let file = to_virtual(&from_file);
-        if let Some(path) = self.resolve_path(scope, &file, specifier) {
+        if let Some(path) = self.resolve_path(scope, &from_file, specifier) {
             if let Some(rel) = from_virtual(&path) {
                 if self.code.contains(&rel) {
                     return Resolution::Internal(rel);
@@ -717,7 +842,45 @@ mod tests {
             r.resolve("src/a.ts", "@/b"),
             Resolution::Internal("src/b.ts".into())
         );
+        // vite.config.ts belongs to tsconfig.node.json, which has no `@/*`.
+        assert_eq!(
+            r.resolve("vite.config.ts", "@/b"),
+            Resolution::Unresolved(UnresolvedReason::UnknownAlias)
+        );
+        assert_eq!(
+            r.resolve("vite.config.ts", "./src/b"),
+            Resolution::Internal("src/b.ts".into())
+        );
         assert!(r.take_warnings().is_empty());
+    }
+
+    #[test]
+    fn reference_ownership_follows_include_exclude_and_inherited_fields() {
+        let r = set(
+            &["src/a.ts", "src/b.ts", "src/gen/g.ts", "lib/l.ts"],
+            &[
+                (
+                    "tsconfig.json",
+                    r#"{"files":[],"references":[{"path":"./tsconfig.app.json"}]}"#,
+                ),
+                (
+                    "tsconfig.app.json",
+                    r#"{"extends":"./tsconfig.shared.json","exclude":["src/gen"],"compilerOptions":{"paths":{"@/*":["./src/*"]}}}"#,
+                ),
+                ("tsconfig.shared.json", r#"{"include":["src"]}"#),
+            ],
+        );
+        assert_eq!(
+            r.resolve("src/a.ts", "@/b"),
+            Resolution::Internal("src/b.ts".into())
+        );
+        for outside in ["src/gen/g.ts", "lib/l.ts"] {
+            assert_eq!(
+                r.resolve(outside, "@/b"),
+                Resolution::Unresolved(UnresolvedReason::UnknownAlias),
+                "{outside}"
+            );
+        }
     }
 
     #[test]
