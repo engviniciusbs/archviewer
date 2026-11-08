@@ -160,7 +160,6 @@ impl Analyzer {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn graph(&self) -> Option<&Graph> {
         self.graph.as_ref()
     }

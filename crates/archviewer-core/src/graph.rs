@@ -13,8 +13,10 @@ use crate::workspace::WorkspacePackage;
 
 #[derive(Debug, Clone)]
 pub(crate) struct FileData {
+    #[allow(dead_code)] // read by the detail layer (Task 6)
     pub language: Language,
     pub loc: u32,
+    #[allow(dead_code)] // read by the detail layer (Task 6)
     pub exports: Vec<String>,
     pub errors: Vec<ParseError>,
 }
@@ -45,9 +47,11 @@ pub(crate) struct FileEdge {
 pub(crate) struct Graph {
     pub nodes: Vec<NodeData>,
     pub edges: Vec<FileEdge>,
+    #[allow(dead_code)] // read by the detail layer (Task 6)
     pub out_edges: Vec<Vec<usize>>,
     pub in_edges: Vec<Vec<usize>>,
     pub cycles: Vec<Vec<NodeId>>,
+    #[allow(dead_code)] // read by the detail layer (Task 6)
     pub cycle_of: HashMap<NodeId, usize>,
     pub unresolved: Vec<UnresolvedImport>,
 }
