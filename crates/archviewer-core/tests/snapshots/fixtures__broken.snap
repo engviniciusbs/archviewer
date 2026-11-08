@@ -1,0 +1,136 @@
+---
+source: crates/archviewer-core/tests/fixtures.rs
+assertion_line: 207
+expression: s.value
+---
+{
+  "summary": {
+    "files": 2,
+    "edges": 1,
+    "cycles": 0,
+    "externals": 0,
+    "unresolved": 2,
+    "skipped": 0,
+    "parseErrors": 1,
+    "workspacePackages": 0,
+    "warnings": [
+      "tsconfig inválido: tsconfig.json"
+    ]
+  },
+  "default": {
+    "nodes": [
+      {
+        "path": "src",
+        "label": "src",
+        "kind": "group",
+        "size": 2,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/bad.ts",
+        "label": "bad.ts",
+        "kind": "file",
+        "size": 2,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/ok.ts",
+        "label": "ok.ts",
+        "kind": "file",
+        "size": 3,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "src/ok.ts",
+        "to": "src/bad.ts",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      }
+    ]
+  },
+  "full": {
+    "nodes": [
+      {
+        "path": "src",
+        "label": "src",
+        "kind": "group",
+        "size": 2,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/bad.ts",
+        "label": "bad.ts",
+        "kind": "file",
+        "size": 2,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/ok.ts",
+        "label": "ok.ts",
+        "kind": "file",
+        "size": 3,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "src/ok.ts",
+        "to": "src/bad.ts",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      }
+    ]
+  },
+  "issues": {
+    "unresolved": [
+      {
+        "from": "src/ok.ts",
+        "specifier": "./missing",
+        "reason": "notFound"
+      },
+      {
+        "from": "src/ok.ts",
+        "specifier": "./styles.css?inline",
+        "reason": "asset"
+      }
+    ],
+    "skipped": [],
+    "parseErrors": [
+      {
+        "path": "src/bad.ts",
+        "errors": [
+          {
+            "message": "Unexpected token",
+            "line": 2,
+            "column": 7
+          }
+        ]
+      }
+    ],
+    "warnings": [
+      "tsconfig inválido: tsconfig.json"
+    ]
+  }
+}

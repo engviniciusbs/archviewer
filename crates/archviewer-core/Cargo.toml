@@ -17,3 +17,6 @@ serde_json = "1.0.154"
 
 [features]
 wasm = []
+
+[dev-dependencies]
+insta = { version = "1.49.0", features = ["json"] }

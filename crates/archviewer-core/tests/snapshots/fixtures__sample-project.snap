@@ -1,0 +1,422 @@
+---
+source: crates/archviewer-core/tests/fixtures.rs
+assertion_line: 138
+expression: s.value
+---
+{
+  "summary": {
+    "files": 8,
+    "edges": 12,
+    "cycles": 1,
+    "externals": 2,
+    "unresolved": 1,
+    "skipped": 0,
+    "parseErrors": 0,
+    "workspacePackages": 0,
+    "warnings": []
+  },
+  "default": {
+    "nodes": [
+      {
+        "path": "src",
+        "label": "src",
+        "kind": "group",
+        "size": 8,
+        "parent": null,
+        "inCycle": true,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/circular",
+        "label": "circular",
+        "kind": "group",
+        "size": 2,
+        "parent": "src",
+        "inCycle": true,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "src/components",
+        "label": "components",
+        "kind": "group",
+        "size": 2,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "src/dynamic",
+        "label": "dynamic",
+        "kind": "group",
+        "size": 1,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "src/utils",
+        "label": "utils",
+        "kind": "group",
+        "size": 1,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "src/App.tsx",
+        "label": "App.tsx",
+        "kind": "file",
+        "size": 15,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/index.ts",
+        "label": "index.ts",
+        "kind": "file",
+        "size": 7,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "date-fns",
+        "label": "date-fns",
+        "kind": "external",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "react",
+        "label": "react",
+        "kind": "external",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "src/components",
+        "to": "react",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": true
+      },
+      {
+        "from": "src/dynamic",
+        "to": "src/components",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/dynamic",
+        "to": "src/utils",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/utils",
+        "to": "date-fns",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/App.tsx",
+        "to": "src/components",
+        "weight": 2,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/App.tsx",
+        "to": "src/utils",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/index.ts",
+        "to": "src/utils",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/index.ts",
+        "to": "src/App.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      }
+    ]
+  },
+  "full": {
+    "nodes": [
+      {
+        "path": "src",
+        "label": "src",
+        "kind": "group",
+        "size": 8,
+        "parent": null,
+        "inCycle": true,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/circular",
+        "label": "circular",
+        "kind": "group",
+        "size": 2,
+        "parent": "src",
+        "inCycle": true,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/components",
+        "label": "components",
+        "kind": "group",
+        "size": 2,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/dynamic",
+        "label": "dynamic",
+        "kind": "group",
+        "size": 1,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/utils",
+        "label": "utils",
+        "kind": "group",
+        "size": 1,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "src/App.tsx",
+        "label": "App.tsx",
+        "kind": "file",
+        "size": 15,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/circular/a.ts",
+        "label": "a.ts",
+        "kind": "file",
+        "size": 11,
+        "parent": "src/circular",
+        "inCycle": true,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/circular/b.ts",
+        "label": "b.ts",
+        "kind": "file",
+        "size": 11,
+        "parent": "src/circular",
+        "inCycle": true,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/components/Button.tsx",
+        "label": "Button.tsx",
+        "kind": "file",
+        "size": 15,
+        "parent": "src/components",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/components/Card.tsx",
+        "label": "Card.tsx",
+        "kind": "file",
+        "size": 18,
+        "parent": "src/components",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/dynamic/lazy.ts",
+        "label": "lazy.ts",
+        "kind": "file",
+        "size": 9,
+        "parent": "src/dynamic",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/index.ts",
+        "label": "index.ts",
+        "kind": "file",
+        "size": 7,
+        "parent": "src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "src/utils/helpers.ts",
+        "label": "helpers.ts",
+        "kind": "file",
+        "size": 13,
+        "parent": "src/utils",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "date-fns",
+        "label": "date-fns",
+        "kind": "external",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "react",
+        "label": "react",
+        "kind": "external",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "src/App.tsx",
+        "to": "src/components/Button.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/App.tsx",
+        "to": "src/components/Card.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/App.tsx",
+        "to": "src/utils/helpers.ts",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/circular/a.ts",
+        "to": "src/circular/b.ts",
+        "weight": 1,
+        "inCycle": true,
+        "typeOnly": false
+      },
+      {
+        "from": "src/circular/b.ts",
+        "to": "src/circular/a.ts",
+        "weight": 1,
+        "inCycle": true,
+        "typeOnly": false
+      },
+      {
+        "from": "src/components/Card.tsx",
+        "to": "src/components/Button.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/components/Card.tsx",
+        "to": "react",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": true
+      },
+      {
+        "from": "src/dynamic/lazy.ts",
+        "to": "src/components/Button.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/dynamic/lazy.ts",
+        "to": "src/utils/helpers.ts",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/index.ts",
+        "to": "src/App.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/index.ts",
+        "to": "src/utils/helpers.ts",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "src/utils/helpers.ts",
+        "to": "date-fns",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      }
+    ]
+  },
+  "issues": {
+    "unresolved": [
+      {
+        "from": "src/components/Button.tsx",
+        "specifier": "./Button.module.css",
+        "reason": "asset"
+      }
+    ],
+    "skipped": [],
+    "parseErrors": [],
+    "warnings": []
+  }
+}

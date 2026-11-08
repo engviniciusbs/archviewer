@@ -1,0 +1,312 @@
+---
+source: crates/archviewer-core/tests/fixtures.rs
+assertion_line: 175
+expression: s.value
+---
+{
+  "summary": {
+    "files": 5,
+    "edges": 5,
+    "cycles": 0,
+    "externals": 1,
+    "unresolved": 0,
+    "skipped": 0,
+    "parseErrors": 0,
+    "workspacePackages": 3,
+    "warnings": []
+  },
+  "default": {
+    "nodes": [
+      {
+        "path": "apps",
+        "label": "apps",
+        "kind": "group",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "apps/web",
+        "label": "web",
+        "kind": "group",
+        "size": 1,
+        "parent": "apps",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "packages",
+        "label": "packages",
+        "kind": "group",
+        "size": 3,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "packages/ui",
+        "label": "@acme/ui",
+        "kind": "group",
+        "size": 2,
+        "parent": "packages",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "packages/utils",
+        "label": "@acme/utils",
+        "kind": "group",
+        "size": 1,
+        "parent": "packages",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "scripts",
+        "label": "scripts",
+        "kind": "group",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": false
+      },
+      {
+        "path": "react",
+        "label": "react",
+        "kind": "external",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "apps/web",
+        "to": "packages/ui",
+        "weight": 2,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "apps/web",
+        "to": "packages/utils",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "apps/web",
+        "to": "react",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      }
+    ]
+  },
+  "full": {
+    "nodes": [
+      {
+        "path": "apps",
+        "label": "apps",
+        "kind": "group",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "apps/web",
+        "label": "web",
+        "kind": "group",
+        "size": 1,
+        "parent": "apps",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "apps/web/src",
+        "label": "src",
+        "kind": "group",
+        "size": 1,
+        "parent": "apps/web",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "packages",
+        "label": "packages",
+        "kind": "group",
+        "size": 3,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "packages/ui",
+        "label": "@acme/ui",
+        "kind": "group",
+        "size": 2,
+        "parent": "packages",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "packages/ui/src",
+        "label": "src",
+        "kind": "group",
+        "size": 2,
+        "parent": "packages/ui",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "packages/utils",
+        "label": "@acme/utils",
+        "kind": "group",
+        "size": 1,
+        "parent": "packages",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "packages/utils/src",
+        "label": "src",
+        "kind": "group",
+        "size": 1,
+        "parent": "packages/utils",
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "scripts",
+        "label": "scripts",
+        "kind": "group",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": true,
+        "expanded": true
+      },
+      {
+        "path": "apps/web/src/main.tsx",
+        "label": "main.tsx",
+        "kind": "file",
+        "size": 7,
+        "parent": "apps/web/src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "packages/ui/src/button.tsx",
+        "label": "button.tsx",
+        "kind": "file",
+        "size": 3,
+        "parent": "packages/ui/src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "packages/ui/src/index.tsx",
+        "label": "index.tsx",
+        "kind": "file",
+        "size": 1,
+        "parent": "packages/ui/src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "packages/utils/src/index.ts",
+        "label": "index.ts",
+        "kind": "file",
+        "size": 1,
+        "parent": "packages/utils/src",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "scripts/build.mjs",
+        "label": "build.mjs",
+        "kind": "file",
+        "size": 1,
+        "parent": "scripts",
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      },
+      {
+        "path": "react",
+        "label": "react",
+        "kind": "external",
+        "size": 1,
+        "parent": null,
+        "inCycle": false,
+        "expandable": false,
+        "expanded": false
+      }
+    ],
+    "edges": [
+      {
+        "from": "apps/web/src/main.tsx",
+        "to": "packages/ui/src/button.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "apps/web/src/main.tsx",
+        "to": "packages/ui/src/index.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "apps/web/src/main.tsx",
+        "to": "packages/utils/src/index.ts",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "apps/web/src/main.tsx",
+        "to": "react",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      },
+      {
+        "from": "packages/ui/src/index.tsx",
+        "to": "packages/ui/src/button.tsx",
+        "weight": 1,
+        "inCycle": false,
+        "typeOnly": false
+      }
+    ]
+  },
+  "issues": {
+    "unresolved": [],
+    "skipped": [],
+    "parseErrors": [],
+    "warnings": []
+  }
+}

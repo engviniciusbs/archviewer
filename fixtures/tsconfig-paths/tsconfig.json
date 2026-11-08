@@ -1,0 +1,7 @@
+{
+  // JSONC: comment and trailing comma below
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+  },
+}

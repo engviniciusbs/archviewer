@@ -1,0 +1,8 @@
+{
+  "name": "@acme/ui",
+  "version": "1.0.0",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./button": "./src/button.tsx"
+  }
+}
