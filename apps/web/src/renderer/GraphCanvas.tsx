@@ -70,6 +70,8 @@ export function GraphCanvas() {
       labelFont: theme.labelFont,
       labelColor: { color: theme.ink },
       renderEdgeLabels: false,
+      // Seta na ponta do alvo: importador -> importado.
+      defaultEdgeType: 'arrow',
       defaultEdgeColor: theme.rule2,
       defaultNodeColor: theme.ink2,
       nodeReducer: (key, data) => {
