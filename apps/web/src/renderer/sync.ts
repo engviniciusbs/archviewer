@@ -27,8 +27,10 @@ function nodeVisual(n: VNode, theme: GraphTheme): Record<string, unknown> {
 }
 
 function edgeVisual(e: VEdge, theme: GraphTheme): Record<string, unknown> {
+  // Ciclo: +1 de espessura (máx. 7) no lugar do tracejado que o Sigma 3 não tem (desvio consciente).
+  const size = clamp(1 + Math.log2(Math.max(1, e.weight)), 1, 6);
   return {
-    size: clamp(1 + Math.log2(Math.max(1, e.weight)), 1, 6),
+    size: e.inCycle ? size + 1 : size,
     color: e.inCycle ? theme.error : e.typeOnly ? theme.muted : theme.rule2,
   };
 }

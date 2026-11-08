@@ -69,6 +69,24 @@ describe('syncGraph', () => {
     expect(g.getEdgeAttribute('1->9', 'color')).toBe(theme.muted);
   });
 
+  it('arestas de ciclo ficam 1 mais grossas (até 7); as outras até 6', () => {
+    const g = mk();
+    const r = {
+      nodes: [node(1, 'file'), node(2, 'file'), node(3, 'file')],
+      edges: [
+        edge(1, 2, { inCycle: true }),
+        edge(2, 1, { inCycle: true, weight: 1024 }),
+        edge(1, 3),
+        edge(3, 2, { weight: 1024 }),
+      ],
+    };
+    syncGraph(g, r, new PositionCache(), theme);
+    expect(g.getEdgeAttribute('1->2', 'size')).toBe(2);
+    expect(g.getEdgeAttribute('2->1', 'size')).toBe(7);
+    expect(g.getEdgeAttribute('1->3', 'size')).toBe(1);
+    expect(g.getEdgeAttribute('3->2', 'size')).toBe(6);
+  });
+
   it('expands, collapses and re-expands around cached positions', () => {
     const g = mk();
     const cache = new PositionCache();
