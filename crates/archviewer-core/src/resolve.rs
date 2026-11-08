@@ -328,9 +328,11 @@ impl ResolverSet {
             return r.clone();
         }
         let options = ResolveOptions {
-            extensions: [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"]
-                .map(String::from)
-                .into(),
+            extensions: [
+                ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".d.ts",
+            ]
+            .map(String::from)
+            .into(),
             extension_alias: vec![
                 (
                     ".js".into(),
@@ -339,7 +341,8 @@ impl ResolverSet {
                 (".mjs".into(), vec![".mts".into(), ".mjs".into()]),
                 (".cjs".into(), vec![".cts".into(), ".cjs".into()]),
             ],
-            condition_names: ["types", "import", "require", "default"]
+            // No "types": it would send deep imports to `dist` declarations.
+            condition_names: ["source", "import", "require", "default"]
                 .map(String::from)
                 .into(),
             tsconfig: usable.map(|s| {
@@ -401,6 +404,9 @@ impl ResolverSet {
     }
 
     pub fn resolve(&self, from_file: &str, specifier: &str) -> Resolution {
+        if specifier.is_empty() {
+            return Resolution::Unresolved(UnresolvedReason::NotFound);
+        }
         if is_asset_specifier(specifier) {
             return Resolution::Unresolved(UnresolvedReason::Asset);
         }
@@ -414,7 +420,8 @@ impl ResolverSet {
                 }
             }
         }
-        if is_relative_or_absolute(specifier) {
+        // Subpath imports (`#x`) belong to the importing package, never an npm one.
+        if is_relative_or_absolute(specifier) || specifier.starts_with('#') {
             return Resolution::Unresolved(UnresolvedReason::NotFound);
         }
         let name = package_name(specifier);
@@ -824,6 +831,50 @@ mod tests {
     }
 
     #[test]
+    fn declaration_only_target_resolves() {
+        let r = set(&["src/a.ts", "src/types.d.ts"], &[]);
+        assert_eq!(
+            r.resolve("src/a.ts", "./types"),
+            Resolution::Internal("src/types.d.ts".into())
+        );
+    }
+
+    #[test]
+    fn exports_prefer_source_over_types_condition() {
+        let r = set(
+            &["packages/ui/src/card.tsx", "apps/web/src/main.ts"],
+            &[
+                ("pnpm-workspace.yaml", "packages:\n  - 'packages/*'\n"),
+                (
+                    "packages/ui/package.json",
+                    r#"{"name":"@repo/ui","exports":{"./*":{"types":"./dist/*.d.ts","import":"./src/*.tsx"}}}"#,
+                ),
+            ],
+        );
+        assert_eq!(
+            r.resolve("apps/web/src/main.ts", "@repo/ui/card"),
+            Resolution::Internal("packages/ui/src/card.tsx".into())
+        );
+    }
+
+    #[test]
+    fn empty_and_unknown_subpath_imports_are_not_external() {
+        let r = set(&["src/a.ts"], &[]);
+        assert_eq!(
+            r.resolve("src/a.ts", ""),
+            Resolution::Unresolved(UnresolvedReason::NotFound)
+        );
+        assert_eq!(
+            r.resolve("src/a.ts", "#internal/x"),
+            Resolution::Unresolved(UnresolvedReason::NotFound)
+        );
+        assert_eq!(
+            r.resolve("src/a.ts", "#x"),
+            Resolution::Unresolved(UnresolvedReason::NotFound)
+        );
+    }
+
+    #[test]
     fn closest_tsconfig_scope_wins() {
         let r = set(
             &["a.ts", "pkg/src/a.ts", "pkg/src/x/m.ts"],
@@ -839,6 +890,9 @@ mod tests {
             r.resolve("pkg/src/a.ts", "#x/m"),
             Resolution::Internal("pkg/src/x/m.ts".into())
         );
-        assert_eq!(r.resolve("a.ts", "#x/m"), Resolution::External("#x".into()));
+        assert_eq!(
+            r.resolve("a.ts", "#x/m"),
+            Resolution::Unresolved(UnresolvedReason::NotFound)
+        );
     }
 }
