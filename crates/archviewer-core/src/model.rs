@@ -237,7 +237,7 @@ pub struct GroupDetail {
     pub id: NodeId,
     pub path: String,
     pub label: String,
-    pub kind: GroupKind,
+    pub group_kind: GroupKind,
     pub file_count: u32,
     pub loc: u32,
     pub in_cycle: bool,
@@ -273,4 +273,57 @@ pub struct SearchHit {
     pub label: String,
     pub path: String,
     pub ancestors: Vec<NodeId>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn round_trip(d: Detail, kind: &str) -> serde_json::Value {
+        let json = serde_json::to_string(&d).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(v["kind"], kind);
+        assert_eq!(serde_json::from_str::<Detail>(&json).unwrap(), d);
+        v
+    }
+
+    #[test]
+    fn detail_round_trips_with_tag() {
+        let file = Detail::File(FileDetail {
+            id: 1,
+            path: "a.ts".into(),
+            language: Language::Ts,
+            loc: 3,
+            exports: vec!["x".into()],
+            imports: vec![],
+            imported_by: vec![],
+            unresolved: vec![],
+            cycle: vec![],
+            fan_in: 0,
+            fan_out: 0,
+            parse_errors: vec![],
+        });
+        round_trip(file, "file");
+
+        let group = Detail::Group(GroupDetail {
+            id: 2,
+            path: "src".into(),
+            label: "src".into(),
+            group_kind: GroupKind::Folder,
+            file_count: 1,
+            loc: 3,
+            in_cycle: false,
+            top_outgoing: vec![],
+            top_incoming: vec![],
+        });
+        let v = round_trip(group, "group");
+        assert_eq!(v["groupKind"], "folder");
+
+        let ext = Detail::External(ExternalDetail {
+            id: 3,
+            name: "react".into(),
+            imported_by: vec![],
+        });
+        round_trip(ext, "external");
+    }
 }

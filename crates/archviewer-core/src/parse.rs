@@ -345,6 +345,48 @@ mod tests {
         assert_eq!(p.loc, 2);
     }
     #[test]
+    fn export_type_from_is_type_only() {
+        let p = parse_source("a.ts", "export type {T} from './t';");
+        assert_eq!(p.imports.len(), 1);
+        assert_eq!(p.imports[0].kind, ImportKind::TypeOnly);
+        assert_eq!(p.imports[0].specifiers, vec!["T"]);
+    }
+    #[test]
+    fn local_export_has_no_import() {
+        let p = parse_source("a.ts", "const N = 1; export {N};");
+        assert!(p.imports.is_empty());
+        assert_eq!(p.exports, vec!["N"]);
+    }
+    #[test]
+    fn export_default_function() {
+        let p = parse_source("a.ts", "export default function f(){}");
+        assert_eq!(p.exports, vec!["default"]);
+    }
+    #[test]
+    fn non_literal_require_and_import_ignored() {
+        let p = parse_source("a.ts", "const x = './a'; require(x); import(x);");
+        assert!(p.imports.is_empty());
+    }
+    #[test]
+    fn ts_declaration_exports() {
+        let p = parse_source(
+            "a.ts",
+            "export type T = 1; export interface I {} export enum E {}",
+        );
+        assert_eq!(p.exports, vec!["T", "I", "E"]);
+    }
+    #[test]
+    fn error_position_after_crlf_and_multibyte() {
+        // Line 2 is `const x = ;`; OXC's label points at the `;`, which is the
+        // 11th character on that line (`const x = ` is 10 chars) -> column 11.
+        let p = parse_source("a.ts", "const é = 1;\r\nconst x = ;");
+        assert_eq!((p.errors[0].line, p.errors[0].column), (2, 11));
+        // Multi-byte char on the same line before the error: `const é = ;`
+        // -> `;` is the 11th character (byte offset would give 12).
+        let p = parse_source("a.ts", "const é = ;");
+        assert_eq!((p.errors[0].line, p.errors[0].column), (1, 11));
+    }
+    #[test]
     fn languages() {
         assert_eq!(parse_source("a.tsx", "").language, Language::Tsx);
         assert_eq!(parse_source("a.cjs", "").language, Language::Js);
