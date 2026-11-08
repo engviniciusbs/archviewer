@@ -87,12 +87,18 @@ fn clean_glob(g: &str) -> String {
     g.to_string()
 }
 
-fn build_set(globs: &[String]) -> Option<GlobSet> {
+/// Builds a set from the valid globs; each invalid one adds a warning.
+fn build_set(globs: &[String], warnings: &mut Vec<String>) -> GlobSet {
     let mut b = GlobSetBuilder::new();
     for g in globs {
-        b.add(GlobBuilder::new(g).literal_separator(true).build().ok()?);
+        match GlobBuilder::new(g).literal_separator(true).build() {
+            Ok(glob) => {
+                b.add(glob);
+            }
+            Err(_) => warnings.push(format!("glob inválido: {g}")),
+        }
     }
-    b.build().ok()
+    b.build().unwrap_or_else(|_| GlobSet::empty())
 }
 
 pub fn detect_workspaces(
@@ -115,9 +121,8 @@ pub fn detect_workspaces(
         .map(|g| clean_glob(g))
         .partition(|g| g.starts_with('!'));
     let neg: Vec<String> = neg.into_iter().map(|g| g[1..].to_string()).collect();
-    let (Some(include), Some(exclude)) = (build_set(&pos), build_set(&neg)) else {
-        return (Vec::new(), warnings);
-    };
+    let include = build_set(&pos, &mut warnings);
+    let exclude = build_set(&neg, &mut warnings);
 
     let mut packages = Vec::new();
     for dir in dirs {
@@ -192,6 +197,22 @@ mod tests {
         );
         assert_eq!(pkgs.len(), 1);
         assert_eq!(warns, vec!["package.json inválido: libs/bad/package.json"]);
+    }
+
+    #[test]
+    fn invalid_glob_is_skipped_with_warning() {
+        let (pkgs, warns) = run(
+            &[
+                ("package.json", r#"{"workspaces":["libs/*","libs/["]}"#),
+                ("libs/a/package.json", r#"{"name":"a"}"#),
+            ],
+            &["libs", "libs/a"],
+        );
+        assert_eq!(pkgs.len(), 1);
+        assert!(
+            warns.contains(&"glob inválido: libs/[".to_string()),
+            "{warns:?}"
+        );
     }
 
     #[test]

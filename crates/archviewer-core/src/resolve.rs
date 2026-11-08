@@ -26,9 +26,18 @@ pub struct ResolverSet {
     code: HashSet<String>,
     packages: Vec<WorkspacePackage>,
     fs: MemoryFs,
-    /// tsconfig/jsconfig path -> `paths` keys (own and inherited), or `None` when invalid.
-    scopes: HashMap<String, Option<Vec<String>>>,
+    /// tsconfig/jsconfig path -> analysis, or `None` when invalid.
+    scopes: HashMap<String, Option<ScopeInfo>>,
     cache: Mutex<HashMap<Option<String>, Arc<Resolver>>>,
+}
+
+/// Result of validating a tsconfig and its relative `extends` chain.
+#[derive(Default)]
+struct ScopeInfo {
+    /// `paths` keys (own and inherited).
+    keys: Vec<String>,
+    /// Sanitized contents (package `extends` removed) for chain files that had one.
+    overrides: Vec<(String, String)>,
 }
 
 const MAX_EXTENDS_DEPTH: usize = 16;
@@ -57,28 +66,42 @@ fn parse_jsonc(content: &str) -> Option<serde_json::Value> {
     serde_json::from_str(&s).ok()
 }
 
-/// `paths` keys of a tsconfig and its relative `extends` chain; `None` when
-/// the file (or a relative base) is missing or not valid JSONC.
+/// Validates a tsconfig and its relative `extends` chain, collecting `paths`
+/// keys; `None` when the file (or a relative base) is missing or not valid
+/// JSONC. Package `extends` are dropped from a sanitized copy of the file,
+/// since the package is not in the in-memory file system.
 fn analyze_tsconfig(
     path: &str,
     configs: &HashMap<String, String>,
     depth: usize,
-) -> Option<Vec<String>> {
+) -> Option<ScopeInfo> {
     if depth > MAX_EXTENDS_DEPTH {
         return None;
     }
-    let value = parse_jsonc(configs.get(path)?)?;
-    let mut keys = Vec::new();
-    let extends: Vec<&str> = match value.get("extends") {
-        Some(serde_json::Value::String(s)) => vec![s.as_str()],
-        Some(serde_json::Value::Array(a)) => a.iter().filter_map(|v| v.as_str()).collect(),
+    let mut value = parse_jsonc(configs.get(path)?)?;
+    let mut info = ScopeInfo::default();
+    let extends: Vec<String> = match value.get("extends") {
+        Some(serde_json::Value::String(s)) => vec![s.clone()],
+        Some(serde_json::Value::Array(a)) => a
+            .iter()
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect(),
         _ => Vec::new(),
     };
-    for ext in extends {
-        if !ext.starts_with('.') {
-            continue; // package base: ignored, no warning
+    let (relative, packages): (Vec<_>, Vec<_>) =
+        extends.into_iter().partition(|e| e.starts_with('.'));
+    if !packages.is_empty() {
+        if let Some(obj) = value.as_object_mut() {
+            if relative.is_empty() {
+                obj.remove("extends");
+            } else {
+                obj.insert("extends".into(), serde_json::json!(relative));
+            }
         }
-        let target = join_rel(parent_dir(path), ext);
+        info.overrides.push((path.to_string(), value.to_string()));
+    }
+    for ext in relative {
+        let target = join_rel(parent_dir(path), &ext);
         let found = [
             target.clone(),
             format!("{target}.json"),
@@ -86,16 +109,18 @@ fn analyze_tsconfig(
         ]
         .into_iter()
         .find(|c| configs.contains_key(c))?;
-        keys.extend(analyze_tsconfig(&found, configs, depth + 1)?);
+        let base = analyze_tsconfig(&found, configs, depth + 1)?;
+        info.keys.extend(base.keys);
+        info.overrides.extend(base.overrides);
     }
     if let Some(paths) = value
         .get("compilerOptions")
         .and_then(|c| c.get("paths"))
         .and_then(|p| p.as_object())
     {
-        keys.extend(paths.keys().cloned());
+        info.keys.extend(paths.keys().cloned());
     }
-    Some(keys)
+    Some(info)
 }
 
 fn is_relative_or_absolute(spec: &str) -> bool {
@@ -179,6 +204,10 @@ impl ResolverSet {
     fn resolver_for(&self, scope: Option<&str>) -> Arc<Resolver> {
         // Invalid tsconfig -> resolver without tsconfig.
         let usable = scope.filter(|s| matches!(self.scopes.get(*s), Some(Some(_))));
+        let overrides = usable
+            .and_then(|s| self.scopes.get(s))
+            .and_then(|i| i.as_ref())
+            .map(|i| &i.overrides);
         let key = usable.map(String::from);
         let mut cache = self.cache.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(r) = cache.get(&key) {
@@ -207,10 +236,11 @@ impl ResolverSet {
             }),
             ..Default::default()
         };
-        let r = Arc::new(ResolverGeneric::new_with_file_system(
-            self.fs.clone(),
-            options,
-        ));
+        let mut fs = self.fs.clone();
+        for (path, content) in overrides.into_iter().flatten() {
+            fs = fs.with_override(path, content.clone());
+        }
+        let r = Arc::new(ResolverGeneric::new_with_file_system(fs, options));
         cache.insert(key, r.clone());
         r
     }
@@ -235,6 +265,10 @@ impl ResolverSet {
         }
         let name = package_name(specifier);
         if let Some(pkg) = self.packages.iter().find(|p| p.name == name) {
+            // Source fallback only for the bare package name, not deep imports.
+            if specifier != name {
+                return Resolution::Unresolved(UnresolvedReason::NotFound);
+            }
             for base in [format!("{}/src", pkg.dir), pkg.dir.clone()] {
                 for ext in ["ts", "tsx", "js", "jsx"] {
                     let cand = format!("{base}/index.{ext}");
@@ -247,7 +281,8 @@ impl ResolverSet {
         }
         let keys = scope
             .and_then(|s| self.scopes.get(s))
-            .and_then(|k| k.as_ref());
+            .and_then(|k| k.as_ref())
+            .map(|i| &i.keys);
         let by_paths = keys.is_some_and(|ks| ks.iter().any(|k| matches_alias_key(specifier, k)));
         if by_paths || specifier.starts_with("@/") || specifier.starts_with("~/") {
             return Resolution::Unresolved(UnresolvedReason::UnknownAlias);
@@ -365,6 +400,29 @@ mod tests {
     }
 
     #[test]
+    fn workspace_deep_import_has_no_source_fallback() {
+        let r = set(
+            &["packages/utils/src/index.ts", "apps/web/src/main.ts"],
+            &[
+                (
+                    "pnpm-workspace.yaml",
+                    "packages:
+  - 'packages/*'
+",
+                ),
+                (
+                    "packages/utils/package.json",
+                    r#"{"name":"@acme/utils","main":"dist/index.js"}"#,
+                ),
+            ],
+        );
+        assert_eq!(
+            r.resolve("apps/web/src/main.ts", "@acme/utils/x"),
+            Resolution::Unresolved(UnresolvedReason::NotFound)
+        );
+    }
+
+    #[test]
     fn invalid_tsconfig_warns_and_continues() {
         let (r, warnings) = build_with_warnings(
             &["src/a.ts", "src/b.ts"],
@@ -404,6 +462,49 @@ mod tests {
             )],
         );
         assert!(w.is_empty());
+        let (r, w) = build_with_warnings(
+            &["src/a.ts", "src/b.ts", "src/lib/m.ts"],
+            &[(
+                "tsconfig.json",
+                r#"{"extends":"@tsconfig/node20/tsconfig.json"}"#,
+            )],
+        );
+        assert!(w.is_empty());
+        assert_eq!(
+            r.resolve("src/a.ts", "./b"),
+            Resolution::Internal("src/b.ts".into())
+        );
+        let (r, w) = build_with_warnings(
+            &["src/a.ts", "src/b.ts", "src/lib/m.ts"],
+            &[(
+                "tsconfig.json",
+                r#"{"extends":"@tsconfig/node20/tsconfig.json","compilerOptions":{"baseUrl":".","paths":{"@lib/*":["src/lib/*"]}}}"#,
+            )],
+        );
+        assert!(w.is_empty());
+        assert_eq!(
+            r.resolve("src/a.ts", "./b"),
+            Resolution::Internal("src/b.ts".into())
+        );
+        assert_eq!(
+            r.resolve("src/a.ts", "@lib/m"),
+            Resolution::Internal("src/lib/m.ts".into())
+        );
+        let (r, w) = build_with_warnings(
+            &["src/a.ts", "src/b.ts"],
+            &[
+                ("tsconfig.json", r#"{"extends":"./base.json"}"#),
+                (
+                    "base.json",
+                    r#"{"extends":["@tsconfig/node20/tsconfig.json"]}"#,
+                ),
+            ],
+        );
+        assert!(w.is_empty());
+        assert_eq!(
+            r.resolve("src/a.ts", "./b"),
+            Resolution::Internal("src/b.ts".into())
+        );
         let (r, w) = build_with_warnings(
             &["src/a.ts", "src/lib/m.ts"],
             &[

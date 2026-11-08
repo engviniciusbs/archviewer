@@ -4,6 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use oxc_resolver::{FileMetadata, FileSystem, ResolveError};
 
@@ -34,13 +35,22 @@ pub fn from_virtual(p: &Path) -> Option<String> {
     Some(segs.join("/"))
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct MemoryFs {
+#[derive(Debug, Default)]
+struct Data {
     /// Files by relative path; code files have empty content.
     files: HashMap<String, String>,
     dirs: HashSet<String>,
     /// Relative link path -> relative target folder.
     links: HashMap<String, String>,
+}
+
+/// Cheap to clone: the data is shared, only the (small) per-clone content
+/// overrides are copied.
+#[derive(Debug, Default, Clone)]
+pub struct MemoryFs {
+    data: Arc<Data>,
+    /// Replacement contents for existing files (e.g. sanitized tsconfigs).
+    overrides: HashMap<String, String>,
 }
 
 fn add_ancestors(dirs: &mut HashSet<String>, rel: &str) {
@@ -58,7 +68,7 @@ impl MemoryFs {
         configs: &HashMap<String, String>,
         links: &[(String, String)],
     ) -> Self {
-        let mut fs = MemoryFs::default();
+        let mut fs = Data::default();
         for p in code_paths {
             let p = normalize(p);
             add_ancestors(&mut fs.dirs, &p);
@@ -74,6 +84,16 @@ impl MemoryFs {
             add_ancestors(&mut fs.dirs, &link);
             fs.links.insert(link, normalize(target));
         }
+        MemoryFs {
+            data: Arc::new(fs),
+            overrides: HashMap::new(),
+        }
+    }
+
+    /// Clone sharing the data, with `path` (an existing file) reading as `content`.
+    pub fn with_override(&self, path: &str, content: String) -> Self {
+        let mut fs = self.clone();
+        fs.overrides.insert(normalize(path), content);
         fs
     }
 
@@ -82,7 +102,7 @@ impl MemoryFs {
         let mut rel = from_virtual(p)?;
         // Links may point through other links, so repeat (bounded against cycles).
         for _ in 0..16 {
-            let hit = self.links.iter().find_map(|(link, target)| {
+            let hit = self.data.links.iter().find_map(|(link, target)| {
                 if rel == *link {
                     Some(target.clone())
                 } else {
@@ -118,15 +138,20 @@ impl FileSystem for MemoryFs {
 
     fn read_to_string(&self, path: &Path) -> io::Result<String> {
         self.follow(path)
-            .and_then(|r| self.files.get(&r).cloned())
+            .and_then(|r| {
+                self.overrides
+                    .get(&r)
+                    .or_else(|| self.data.files.get(&r))
+                    .cloned()
+            })
             .ok_or_else(|| not_found(path))
     }
 
     fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
         let rel = self.follow(path).ok_or_else(|| not_found(path))?;
-        if self.files.contains_key(&rel) {
+        if self.data.files.contains_key(&rel) {
             Ok(FileMetadata::new(true, false, false))
-        } else if self.dirs.contains(&rel) {
+        } else if self.data.dirs.contains(&rel) {
             Ok(FileMetadata::new(false, true, false))
         } else {
             Err(not_found(path))
@@ -136,7 +161,7 @@ impl FileSystem for MemoryFs {
     fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
         // lstat: the last component is not followed, intermediate links are.
         let rel = from_virtual(path).ok_or_else(|| not_found(path))?;
-        if self.links.contains_key(&rel) {
+        if self.data.links.contains_key(&rel) {
             return Ok(FileMetadata::new(false, false, true));
         }
         self.metadata(path)
@@ -144,7 +169,7 @@ impl FileSystem for MemoryFs {
 
     fn read_link(&self, path: &Path) -> Result<PathBuf, ResolveError> {
         from_virtual(path)
-            .and_then(|rel| self.links.get(&rel))
+            .and_then(|rel| self.data.links.get(&rel))
             .map(|target| to_virtual(target))
             .ok_or_else(|| {
                 ResolveError::from(io::Error::new(io::ErrorKind::InvalidInput, "not a symlink"))
