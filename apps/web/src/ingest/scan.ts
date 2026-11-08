@@ -1,5 +1,5 @@
 import { GitignoreStack } from './gitignore';
-import type { DirSource } from './source';
+import type { DirEntry, DirSource } from './source';
 
 export type ScanFile = { path: string; size: number };
 
@@ -9,7 +9,12 @@ export function abortError(): DOMException {
 
 export async function scan(
   src: DirSource,
-  opts: { ignoredDirs: string[]; signal?: AbortSignal },
+  opts: {
+    ignoredDirs: string[];
+    signal?: AbortSignal;
+    /** Pasta abaixo da raiz que não pôde ser listada; a varredura segue sem ela. */
+    onUnreadable?: (path: string) => void;
+  },
 ): Promise<ScanFile[]> {
   const ignored = new Set(opts.ignoredDirs);
   const git = new GitignoreStack();
@@ -17,7 +22,16 @@ export async function scan(
 
   async function walk(dir: string): Promise<void> {
     if (opts.signal?.aborted) throw abortError();
-    const entries = await src.list(dir);
+    let entries: DirEntry[];
+    try {
+      entries = await src.list(dir);
+    } catch (e) {
+      // A raiz ilegível é fatal; uma subpasta ilegível só fica de fora.
+      if (opts.signal?.aborted) throw abortError();
+      if (dir === '') throw e;
+      opts.onUnreadable?.(dir);
+      return;
+    }
     const join = (name: string) => (dir ? `${dir}/${name}` : name);
 
     // O .gitignore do diretório vale antes de julgar os filhos.

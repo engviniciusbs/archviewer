@@ -101,8 +101,14 @@ export function fromDirectoryHandle(handle: FileSystemDirectoryHandle): DirSourc
           dirs.set(dir ? `${dir}/${name}` : name, entry as FileSystemDirectoryHandle);
           out.push({ name, kind: 'dir', size: 0 });
         } else {
-          const file = await (entry as FileSystemFileHandle).getFile();
-          out.push({ name, kind: 'file', size: file.size });
+          // Arquivo travado ou sem permissão: entra com tamanho 0 e a leitura o marca como ilegível.
+          let size = 0;
+          try {
+            size = (await (entry as FileSystemFileHandle).getFile()).size;
+          } catch {
+            // segue com 0
+          }
+          out.push({ name, kind: 'file', size });
         }
       }
       return out;

@@ -61,4 +61,25 @@ describe('scan', () => {
       name: 'AbortError',
     });
   });
+
+  it('pasta ilegível vira pulada e o resto segue', async () => {
+    const src = memorySource('p', { 'locked/a.ts': '1', 'src/b.ts': '1' });
+    const orig = src.list.bind(src);
+    src.list = async (dir) => {
+      if (dir === 'locked') throw new DOMException('negado', 'NotReadableError');
+      return orig(dir);
+    };
+    const unreadable: string[] = [];
+    const files = await scan(src, { ignoredDirs, onUnreadable: (p) => unreadable.push(p) });
+    expect(files.map((f) => f.path)).toEqual(['src/b.ts']);
+    expect(unreadable).toEqual(['locked']);
+  });
+
+  it('raiz ilegível ainda rejeita', async () => {
+    const src = memorySource('p', { 'a.ts': '1' });
+    src.list = async () => {
+      throw new Error('negado');
+    };
+    await expect(scan(src, { ignoredDirs })).rejects.toThrow('negado');
+  });
 });

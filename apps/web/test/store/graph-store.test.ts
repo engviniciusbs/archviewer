@@ -189,6 +189,20 @@ describe('openProject', () => {
     expect(store.getState().error).toBe('falhou');
   });
 
+  it('pasta ilegível na varredura entra em ingestSkipped e a análise termina', async () => {
+    const api = makeApi();
+    const src = memorySource('proj', { 'a.ts': 'a', 'locked/b.ts': 'b' });
+    const orig = src.list.bind(src);
+    src.list = async (dir) => {
+      if (dir === 'locked') throw new DOMException('negado', 'NotReadableError');
+      return orig(dir);
+    };
+    const store = createGraphStore({ api: () => asApi(api) });
+    await store.getState().openProject(src, false);
+    expect(store.getState().phase).toBe('ready');
+    expect(store.getState().ingestSkipped).toEqual([{ path: 'locked', reason: 'unreadable' }]);
+  });
+
   it('um novo openProject descarta o anterior e ignora sua resposta', async () => {
     const a1 = makeApi();
     const a2 = makeApi();

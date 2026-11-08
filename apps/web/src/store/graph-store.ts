@@ -218,7 +218,12 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
         try {
           await c.start(source.name);
           const dirs = await c.ignoredDirs();
-          const files = await scan(source, { ignoredDirs: dirs, signal: ac.signal });
+          const unreadableDirs: IngestSkip[] = [];
+          const files = await scan(source, {
+            ignoredDirs: dirs,
+            signal: ac.signal,
+            onUnreadable: (path) => unreadableDirs.push({ path, reason: 'unreadable' }),
+          });
           const ok = await c.filterIngestible(files.map((f) => f.path));
           if (gen !== generation) return;
           const ingestible = files.filter((_, i) => ok[i]);
@@ -248,7 +253,7 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
           });
           if (gen !== generation) return;
 
-          set({ phase: 'analyzing', ingestSkipped: skipped });
+          set({ phase: 'analyzing', ingestSkipped: [...unreadableDirs, ...skipped] });
           const fin = await c.finish();
           if (gen !== generation) return;
           const my = ++viewSeq;
