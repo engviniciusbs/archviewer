@@ -4,6 +4,8 @@ use std::collections::{BTreeSet, HashMap};
 
 use globset::{GlobBuilder, GlobSet, GlobSetBuilder};
 
+use crate::model::{Warning, WarningCode};
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkspacePackage {
     pub name: String,
@@ -128,14 +130,14 @@ fn parse_json(content: &str) -> Option<serde_json::Value> {
 }
 
 /// Builds a set from the valid globs; each invalid one adds a warning.
-fn build_set(globs: &[String], warnings: &mut Vec<String>) -> GlobSet {
+fn build_set(globs: &[String], warnings: &mut Vec<Warning>) -> GlobSet {
     let mut b = GlobSetBuilder::new();
     for g in globs {
         match GlobBuilder::new(g).literal_separator(true).build() {
             Ok(glob) => {
                 b.add(glob);
             }
-            Err(_) => warnings.push(format!("glob inválido: {g}")),
+            Err(_) => warnings.push(Warning::new(WarningCode::InvalidGlob, g.clone())),
         }
     }
     b.build().unwrap_or_else(|_| GlobSet::empty())
@@ -144,7 +146,7 @@ fn build_set(globs: &[String], warnings: &mut Vec<String>) -> GlobSet {
 pub fn detect_workspaces(
     configs: &HashMap<String, String>,
     dirs: &BTreeSet<String>,
-) -> (Vec<WorkspacePackage>, Vec<String>) {
+) -> (Vec<WorkspacePackage>, Vec<Warning>) {
     let mut warnings = Vec::new();
     let mut globs: Vec<String> = Vec::new();
     if let Some(yaml) = configs.get("pnpm-workspace.yaml") {
@@ -153,7 +155,10 @@ pub fn detect_workspaces(
     if let Some(pkg) = configs.get("package.json") {
         match parse_json(pkg) {
             Some(v) => globs.extend(package_json_globs(&v)),
-            None => warnings.push("package.json inválido: package.json".to_string()),
+            None => warnings.push(Warning::new(
+                WarningCode::InvalidPackageJson,
+                "package.json",
+            )),
         }
     }
     let (neg, pos): (Vec<_>, Vec<_>) = globs
@@ -182,7 +187,7 @@ pub fn detect_workspaces(
                     });
                 }
             }
-            None => warnings.push(format!("package.json inválido: {pj}")),
+            None => warnings.push(Warning::new(WarningCode::InvalidPackageJson, pj.clone())),
         }
     }
     (packages, warnings)
@@ -192,7 +197,7 @@ pub fn detect_workspaces(
 mod tests {
     use super::*;
 
-    fn run(configs: &[(&str, &str)], dirs: &[&str]) -> (Vec<WorkspacePackage>, Vec<String>) {
+    fn run(configs: &[(&str, &str)], dirs: &[&str]) -> (Vec<WorkspacePackage>, Vec<Warning>) {
         let configs: HashMap<String, String> = configs
             .iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
@@ -236,7 +241,13 @@ mod tests {
             &["libs", "libs/bad", "libs/ok"],
         );
         assert_eq!(pkgs.len(), 1);
-        assert_eq!(warns, vec!["package.json inválido: libs/bad/package.json"]);
+        assert_eq!(
+            warns,
+            vec![Warning::new(
+                WarningCode::InvalidPackageJson,
+                "libs/bad/package.json"
+            )]
+        );
     }
 
     #[test]
@@ -250,7 +261,7 @@ mod tests {
         );
         assert_eq!(pkgs.len(), 1);
         assert!(
-            warns.contains(&"glob inválido: libs/[".to_string()),
+            warns.contains(&Warning::new(WarningCode::InvalidGlob, "libs/[")),
             "{warns:?}"
         );
     }

@@ -6,7 +6,7 @@ use std::fmt;
 use crate::graph::Graph;
 use crate::model::{
     AddResult, AnalyzerConfig, FileInput, FileParseErrors, Issues, NodeKind, SkipReason,
-    SkippedFile, Summary,
+    SkippedFile, Summary, Warning,
 };
 use crate::parse::{parse_source, ParsedFile};
 use crate::paths::{is_code, is_ingestible, normalize};
@@ -21,7 +21,7 @@ pub enum AnalyzerError {
 impl fmt::Display for AnalyzerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AnalyzerError::AlreadyFinished => write!(f, "análise já finalizada"),
+            AnalyzerError::AlreadyFinished => write!(f, "analysis already finished"),
         }
     }
 }
@@ -35,7 +35,7 @@ pub struct Analyzer {
     skipped: Vec<SkippedFile>,
     graph: Option<Graph>,
     summary: Option<Summary>,
-    warnings: Vec<String>,
+    warnings: Vec<Warning>,
 }
 
 impl Analyzer {
@@ -95,7 +95,7 @@ impl Analyzer {
         let (resolver, res_warnings) = ResolverSet::build(&code_paths, &self.configs, &packages);
 
         let graph = Graph::build(&self.config.project_name, code, &resolver, &packages);
-        let mut warnings: Vec<String> = Vec::new();
+        let mut warnings: Vec<Warning> = Vec::new();
         for w in ws_warnings
             .into_iter()
             .chain(res_warnings)
@@ -404,9 +404,20 @@ mod tests {
         assert_eq!(s.edges, 1);
         assert_eq!(
             s.warnings,
-            vec!["tsconfig ignorado na resolução: tsconfig.json"]
+            vec![crate::model::Warning::new(
+                crate::model::WarningCode::TsconfigIgnored,
+                "tsconfig.json"
+            )]
         );
         assert_eq!(a.issues().warnings, s.warnings);
+    }
+
+    #[test]
+    fn already_finished_message_is_english() {
+        assert_eq!(
+            AnalyzerError::AlreadyFinished.to_string(),
+            "analysis already finished"
+        );
     }
 
     #[test]
