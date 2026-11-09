@@ -138,14 +138,6 @@ export function CompareMenu() {
         </div>
       )}
       <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => void onFile(e)} />
-      {comparison && (
-        <span className="compare__pill">
-          {t.compare.pill(comparison.label)}
-          <button type="button" className="compare__x" aria-label={t.compare.stop} onClick={clearComparison}>
-            ×
-          </button>
-        </span>
-      )}
       <p className="export__status" aria-live="polite">
         {feedback}
       </p>

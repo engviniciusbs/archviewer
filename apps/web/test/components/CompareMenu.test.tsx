@@ -3,6 +3,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CompareMenu } from '../../src/components/CompareMenu';
+import { StatusBar } from '../../src/components/StatusBar';
 import { g } from '../compare/helpers';
 import { makeApi, readyStore, renderWith } from './helpers';
 
@@ -16,7 +17,13 @@ beforeEach(() => {
 async function setup() {
   const { store } = await readyStore(makeApi({ exportGraph: current }));
   const user = userEvent.setup();
-  const view = renderWith(store, <CompareMenu />);
+  const view = renderWith(
+    store,
+    <>
+      <CompareMenu />
+      <StatusBar />
+    </>,
+  );
   return { store, user, view };
 }
 

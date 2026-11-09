@@ -54,6 +54,7 @@ export function StatusBar() {
   const elapsedMs = useGraphStore((s) => s.elapsedMs);
   const deadCode = useGraphStore((s) => s.deadCode);
   const comparison = useGraphStore((s) => s.comparison);
+  const clearComparison = useGraphStore((s) => s.clearComparison);
   const fallback = useGraphStore((s) => s.fallback);
   const [open, setOpen] = useState<Disclosure | null>(null);
   const unresolvedId = useId();
@@ -122,7 +123,13 @@ export function StatusBar() {
               </li>
             ))}
             {comparison && (
-              <li className="num">
+              <li className="num statusbar__compare">
+                <span className="compare__pill">
+                  {t.compare.pill(comparison.label)}
+                  <button type="button" className="compare__x" aria-label={t.compare.stop} onClick={clearComparison}>
+                    ×
+                  </button>
+                </span>
                 <button
                   type="button"
                   className="linkish statusbar__changes"

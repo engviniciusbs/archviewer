@@ -240,6 +240,11 @@
 .compare + .export {
   margin-left: 0;
 }
+.statusbar__compare {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
 .compare__pill {
   display: inline-flex;
   align-items: center;
@@ -385,7 +390,8 @@
 
 .search {
   position: relative;
-  flex: 1 1 16rem;
+  flex: 1 1 12rem;
+  min-width: 9rem;
   max-width: 26rem;
 }
 .search__icon {

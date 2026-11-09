@@ -1,11 +1,11 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 
 const SAMPLE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../fixtures/sample-project');
 
-test('abre o sample-project e navega pela arquitetura', async ({ page, context }) => {
+test('abre o sample-project e navega pela arquitetura', async ({ page, context }, testInfo) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const problems: string[] = [];
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
@@ -96,6 +96,38 @@ test('abre o sample-project e navega pela arquitetura', async ({ page, context }
   const graph = JSON.parse(json.bytes.toString('utf8'));
   expect(graph.files).toHaveLength(8);
   expect(graph.cycles).toEqual([['src/circular/a.ts', 'src/circular/b.ts']]);
+
+  // Comparar: com o próprio export não há mudanças; com uma base sem helpers.ts, ele aparece como novo.
+  const compareWith = async (file: string) => {
+    await page.getByRole('button', { name: 'Compare' }).click();
+    const picker = page.waitForEvent('filechooser');
+    await page.getByRole('menuitem', { name: 'With an exported JSON…' }).click();
+    await (await picker).setFiles(file);
+  };
+  const same = testInfo.outputPath('same.json');
+  await writeFile(same, json.bytes);
+  await compareWith(same);
+  await expect(page.getByText('Comparing with same.json')).toBeVisible();
+  await expect(status).toContainText('0 changes');
+
+  const helpers = 'src/utils/helpers.ts';
+  const older = testInfo.outputPath('older.json');
+  await writeFile(
+    older,
+    JSON.stringify({
+      ...graph,
+      files: graph.files.filter((f: { path: string }) => f.path !== helpers),
+      edges: graph.edges.filter((e: { from: string; to: string }) => e.from !== helpers && e.to !== helpers),
+    }),
+  );
+  await compareWith(older);
+  await expect(page.getByText('Comparing with older.json')).toBeVisible();
+  await page.getByRole('button', { name: /\d+ changes?/ }).click();
+  const changes = page.getByRole('region', { name: 'Changes' });
+  await expect(changes.getByRole('list', { name: 'Added files' })).toContainText(helpers);
+  await changes.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('button', { name: 'Stop comparing' }).click();
+  await expect(page.getByText('Comparing with older.json')).toHaveCount(0);
 
   const png = await readDownload('PNG image');
   expect(png.name).toBe('sample-project-archviewer.png');
