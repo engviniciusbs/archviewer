@@ -7,6 +7,7 @@ export function ColorBySelect() {
   const t = useT();
   const colorBy = useGraphStore((s) => s.colorBy);
   const setColorBy = useGraphStore((s) => s.setColorBy);
+  const comparing = useGraphStore((s) => s.comparison !== null);
   return (
     <select
       className="language colorby"
@@ -14,7 +15,7 @@ export function ColorBySelect() {
       value={colorBy}
       onChange={(e) => setColorBy(e.target.value as ColorBy)}
     >
-      {COLOR_BY.map((c) => (
+      {COLOR_BY.filter((c) => c !== 'changes' || comparing).map((c) => (
         <option key={c} value={c}>
           {c === 'none' ? `${t.heat.label}: ${t.heat.none}` : t.heat[c]}
         </option>

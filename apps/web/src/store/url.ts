@@ -14,7 +14,8 @@ export function readFilters(search: string): Filters {
 
 export function readColorBy(search: string): ColorBy {
   const v = new URLSearchParams(search).get('color');
-  return isColorBy(v) ? v : 'none';
+  // "changes" depende de uma comparação, que não sobrevive a um recarregamento.
+  return isColorBy(v) && v !== 'changes' ? v : 'none';
 }
 
 /** '' quando tudo é padrão; senão uma string iniciada por '?'. */
@@ -26,6 +27,6 @@ export function writeFilters(f: Filters, colorBy: ColorBy = 'none'): string {
   const parts: string[] = [];
   if (hide.length > 0) parts.push(`hide=${hide.join(',')}`);
   if (f.cyclesOnly) parts.push('cycles=1');
-  if (colorBy !== 'none') parts.push(`color=${colorBy}`);
+  if (colorBy !== 'none' && colorBy !== 'changes') parts.push(`color=${colorBy}`);
   return parts.length > 0 ? `?${parts.join('&')}` : '';
 }

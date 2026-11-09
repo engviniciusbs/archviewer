@@ -24,6 +24,7 @@ describe('url', () => {
     expect(writeFilters(none, 'loc')).toBe('?color=loc');
     expect(writeFilters({ ...none, cyclesOnly: true }, 'unused')).toBe('?cycles=1&color=unused');
     expect(writeFilters(none, 'none')).toBe('');
+    expect(writeFilters(none, 'changes')).toBe('');
     expect(readColorBy('?color=fanOut')).toBe('fanOut');
     expect(readColorBy('?color=xyz')).toBe('none');
     expect(readColorBy('')).toBe('none');

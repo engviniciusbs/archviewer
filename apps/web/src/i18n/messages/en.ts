@@ -171,6 +171,9 @@ export const en = {
     loc: 'Lines',
     unused: 'Unused',
     testOnly: 'Used only by tests',
+    changes: 'Changes',
+    added: 'Added',
+    changed: 'Changed dependencies',
   },
   export: {
     button: 'Export',

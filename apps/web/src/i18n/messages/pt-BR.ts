@@ -162,6 +162,9 @@ export const ptBR = {
     loc: 'Linhas',
     unused: 'Sem uso',
     testOnly: 'Só usado por testes',
+    changes: 'Mudanças',
+    added: 'Novo',
+    changed: 'Dependências alteradas',
   },
   export: {
     button: 'Exportar',

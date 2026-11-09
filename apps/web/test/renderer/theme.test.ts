@@ -25,6 +25,8 @@ describe('readTheme', () => {
       '--color-heat-5': 'h5',
       '--color-unused': 'u',
       '--color-test-only': 't',
+      '--color-added': 'a',
+      '--color-changed': 'c',
     };
     vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: (k: string) => values[k] ?? '' }));
     const toRgb = vi.fn((c: string) => `rgb(${c})`);
@@ -42,7 +44,8 @@ describe('readTheme', () => {
     expect(t.labelFont).toBe('"IBM Plex Sans", sans-serif');
     expect(t.heat).toEqual(['rgb(h1)', 'rgb(h2)', 'rgb(h3)', 'rgb(h4)', 'rgb(h5)']);
     expect([t.unused, t.testOnly]).toEqual(['rgb(u)', 'rgb(t)']);
-    expect(toRgb).toHaveBeenCalledTimes(17);
+    expect([t.added, t.changed]).toEqual(['rgb(a)', 'rgb(c)']);
+    expect(toRgb).toHaveBeenCalledTimes(19);
   });
 
   it('canvasToRgb returns the input when there is no canvas', () => {

@@ -14,6 +14,8 @@ export interface GraphTheme {
   heat: string[];
   unused: string;
   testOnly: string;
+  added: string;
+  changed: string;
 }
 
 /** Lê os tokens do documento; o Sigma não entende oklch, então toda cor passa por `toRgb`. */
@@ -36,6 +38,8 @@ export function readTheme(root: Element, toRgb: (css: string) => string): GraphT
     heat: [1, 2, 3, 4, 5].map((i) => color(`--color-heat-${i}`)),
     unused: color('--color-unused'),
     testOnly: color('--color-test-only'),
+    added: color('--color-added'),
+    changed: color('--color-changed'),
   };
 }
 

@@ -8,6 +8,8 @@ const CSS_COLORS: HeatColors = {
   heat: [1, 2, 3, 4, 5].map((i) => `var(--color-heat-${i})`),
   unused: 'var(--color-unused)',
   testOnly: 'var(--color-test-only)',
+  added: 'var(--color-added)',
+  changed: 'var(--color-changed)',
 };
 
 /** Legenda do heatmap no canto do canvas; some quando não há métrica ativa. */

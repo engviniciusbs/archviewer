@@ -1,7 +1,9 @@
 import type { VNode } from '@archviewer/core-wasm';
 import { describe, expect, it } from 'vitest';
 import { messagesFor } from '../../src/i18n/locales';
-import { heatColorIndex, heatLegend, heatScale, metricOf } from '../../src/renderer/heat';
+import { changesPainter, heatColorIndex, heatLegend, heatScale, metricOf } from '../../src/renderer/heat';
+import { diffGraphs } from '../../src/compare/diff';
+import { g } from '../compare/helpers';
 
 const node = (id: number, o: Partial<VNode> = {}): VNode => ({
   id,
@@ -17,7 +19,7 @@ const node = (id: number, o: Partial<VNode> = {}): VNode => ({
   ...o,
 });
 
-const colors = { heat: ['h1', 'h2', 'h3', 'h4', 'h5'], unused: 'u', testOnly: 't' };
+const colors = { heat: ['h1', 'h2', 'h3', 'h4', 'h5'], unused: 'u', testOnly: 't', added: 'A', changed: 'C' };
 
 describe('heatScale', () => {
   it('cinco faixas por quantis', () => {
@@ -105,5 +107,39 @@ describe('heatLegend', () => {
       ],
     });
     expect(heatLegend('none', [], t, colors)).toBeNull();
+  });
+
+  it('modo changes: novo e dependências alteradas', () => {
+    expect(heatLegend('changes', [], t, colors)).toEqual({
+      title: 'Changes',
+      items: [
+        { color: 'A', label: 'Added' },
+        { color: 'C', label: 'Changed dependencies' },
+      ],
+    });
+  });
+});
+
+describe('changesPainter', () => {
+  const diff = diffGraphs(
+    g({ files: ['src/a.ts', 'src/lib/b.ts'], externals: [] }),
+    g({
+      files: ['src/a.ts', 'src/lib/b.ts', 'src/new.ts'],
+      externals: ['react'],
+      edges: [['src/lib/b.ts', 'react']],
+    }),
+  );
+  const paint = changesPainter(diff, colors);
+  it('pinta o que é novo e o que teve dependências alteradas', () => {
+    expect(paint(node(1, { path: 'src/new.ts' }))).toEqual({ color: 'A' });
+    expect(paint(node(2, { path: 'src/lib/b.ts' }))).toEqual({ color: 'C' });
+    expect(paint(node(3, { path: 'src/a.ts' }))).toBeUndefined();
+    expect(paint(node(4, { kind: 'external', path: 'react', label: 'react' }))).toEqual({ color: 'A' });
+  });
+  it('grupo com mudança dentro ganha borda', () => {
+    expect(paint(node(5, { kind: 'group', path: 'src/lib' }))).toEqual({ borderColor: 'C' });
+    expect(paint(node(6, { kind: 'group', path: 'src' }))).toEqual({ borderColor: 'C' });
+    expect(paint(node(7, { kind: 'group', path: 'docs' }))).toBeUndefined();
+    expect(paint(node(8, { kind: 'group', path: '' }))).toBeUndefined();
   });
 });

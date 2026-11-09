@@ -18,6 +18,8 @@ const theme: GraphTheme = {
   heat: ['rgb(1, 1, 1)', 'rgb(2, 2, 2)', 'rgb(3, 3, 3)', 'rgb(4, 4, 4)', 'rgb(5, 5, 5)'],
   unused: 'rgb(193, 122, 0)',
   testOnly: 'rgb(222, 161, 67)',
+  added: 'rgb(27, 175, 122)',
+  changed: 'rgb(98, 80, 214)',
 };
 
 const n = (x: number, y: number, o: Partial<SceneNode> = {}): SceneNode => ({
