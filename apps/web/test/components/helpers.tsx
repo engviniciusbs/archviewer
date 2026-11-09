@@ -5,6 +5,7 @@ import type {
   AddResult,
   Detail,
   FileInput,
+  GraphExport,
   Issues,
   SearchHit,
   Summary,
@@ -65,7 +66,7 @@ export const issues = (o: Partial<Issues> = {}): Issues => ({
   ...o,
 });
 
-export function makeApi(o: { hits?: SearchHit[]; finish?: Partial<FinishResult> } = {}) {
+export function makeApi(o: { hits?: SearchHit[]; finish?: Partial<FinishResult>; exportGraph?: GraphExport } = {}) {
   return {
     ignoredDirs: vi.fn(async () => ['node_modules']),
     start: vi.fn(async () => {}),
@@ -82,6 +83,7 @@ export function makeApi(o: { hits?: SearchHit[]; finish?: Partial<FinishResult> 
     view: vi.fn(async () => sampleGraph()),
     detail: vi.fn(async (): Promise<Detail | null> => null),
     find: vi.fn(async () => o.hits ?? []),
+    exportGraph: vi.fn(async () => o.exportGraph ?? null),
     onCrash: vi.fn(() => () => {}),
     dispose: vi.fn(),
   };
