@@ -103,6 +103,25 @@ describe('DetailPanel', () => {
     expect(screen.getByText('Unexpected token')).toBeInTheDocument();
   });
 
+  it('selo e exports sem uso para um arquivo sem uso', async () => {
+    const { store } = await setup(fileDetail({ usage: 'unused', unusedExports: ['run', 'default'] }));
+    renderWith(store, <DetailPanel />);
+    expect(screen.getByText('Unused', { selector: '.badge' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Unused exports' })).toHaveTextContent('run');
+  });
+
+  it('selo de entrada com o motivo; nada para arquivo usado', async () => {
+    const { store } = await setup(fileDetail({ usage: 'entry', entryReason: 'packageJson' }));
+    renderWith(store, <DetailPanel />);
+    expect(screen.getByText('Entry · package.json')).toBeInTheDocument();
+    store.setState({ detail: fileDetail({ usage: 'testOnly' }) });
+    expect(await screen.findByText('Used only by tests', { selector: '.badge' })).toBeInTheDocument();
+    store.setState({ detail: fileDetail() });
+    expect(await screen.findByText('src/a.ts', { selector: 'code' })).toBeInTheDocument();
+    expect(document.querySelector('.badge')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Unused exports' })).not.toBeInTheDocument();
+  });
+
   it('avisa quando o arquivo está num ciclo', async () => {
     const { store } = await setup(fileDetail());
     renderWith(store, <DetailPanel />);

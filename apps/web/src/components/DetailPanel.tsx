@@ -121,12 +121,23 @@ function CycleNote({ cycle }: { cycle?: string[] }) {
   );
 }
 
+function UsageBadge({ d }: { d: FileD }) {
+  const t = useT();
+  if (d.usage === 'unused') return <span className="badge badge--unused">{t.dead.unused}</span>;
+  if (d.usage === 'testOnly') return <span className="badge badge--test-only">{t.heat.testOnly}</span>;
+  if (d.usage === 'entry' && d.entryReason)
+    return <span className="badge badge--entry">{t.dead.entry(t.dead.reasons[d.entryReason])}</span>;
+  return null;
+}
+
 function FileView({ d, go }: { d: FileD; go: Go }) {
   const t = useT();
   const source = useGraphStore((s) => s.source);
   return (
     <>
-      <Head title={basename(d.path)} path={d.path} />
+      <Head title={basename(d.path)} path={d.path}>
+        <UsageBadge d={d} />
+      </Head>
       <dl className="figures">
         <Figure label={t.detail.fanIn} value={d.fanIn} testId="fan-in" />
         <Figure label={t.detail.fanOut} value={d.fanOut} testId="fan-out" />
@@ -158,6 +169,17 @@ function FileView({ d, go }: { d: FileD; go: Go }) {
             {d.unresolved.map((u, i) => (
               <li key={i}>
                 <code className="mono">{u.specifier}</code> <span className="muted">{t.reasons[u.reason]}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+      {d.unusedExports.length > 0 && (
+        <Section title={t.dead.exports} n={d.unusedExports.length}>
+          <ul className="exports" aria-label={t.dead.exports}>
+            {d.unusedExports.map((e) => (
+              <li key={e}>
+                <code className="mono">{e}</code>
               </li>
             ))}
           </ul>

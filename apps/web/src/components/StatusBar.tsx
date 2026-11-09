@@ -5,11 +5,13 @@ import { useT } from '../i18n/store';
 import { useGraphStore } from '../store/graph-store';
 import { visibleUnresolved } from '../store/selectors';
 import { Icon } from './Icon';
+import { DeadCodePanel } from './DeadCodePanel';
 import { IssuesPanel, SkippedPanel } from './IssuesPanel';
 
 type StatusInput = Pick<Summary, 'files' | 'edges' | 'cycles' | 'externals'> & {
   unresolvedShown: number;
   ignored: number;
+  unused: number;
   elapsedMs: number | null;
 };
 
@@ -22,6 +24,7 @@ export function statusItems(s: StatusInput, t: Messages): string[] {
     t.status.externals(s.externals),
     t.status.unresolved(s.unresolvedShown),
     t.status.ignored(s.ignored),
+    t.status.unused(s.unused),
   ];
   if (s.elapsedMs !== null) items.push(t.fmt.seconds(s.elapsedMs));
   return items;
@@ -37,8 +40,9 @@ const warningKey = (w: Warning) => `${w.code}\u0000${w.subject}`;
 
 const UNRESOLVED_INDEX = 4;
 const IGNORED_INDEX = 5;
+const UNUSED_INDEX = 6;
 
-type Disclosure = 'unresolved' | 'ignored';
+type Disclosure = 'unresolved' | 'ignored' | 'unused';
 
 export function StatusBar() {
   const t = useT();
@@ -47,10 +51,12 @@ export function StatusBar() {
   const filters = useGraphStore((s) => s.filters);
   const ingestSkipped = useGraphStore((s) => s.ingestSkipped);
   const elapsedMs = useGraphStore((s) => s.elapsedMs);
+  const deadCode = useGraphStore((s) => s.deadCode);
   const fallback = useGraphStore((s) => s.fallback);
   const [open, setOpen] = useState<Disclosure | null>(null);
   const unresolvedId = useId();
   const ignoredId = useId();
+  const unusedId = useId();
 
   if (!summary) return null;
   const unresolved = issues ? visibleUnresolved(issues, filters) : [];
@@ -59,6 +65,7 @@ export function StatusBar() {
       ...summary,
       unresolvedShown: issues ? unresolved.length : summary.unresolved,
       ignored: summary.skipped + ingestSkipped.length,
+      unused: deadCode?.unusedFiles.length ?? 0,
       elapsedMs,
     },
     t,
@@ -71,6 +78,7 @@ export function StatusBar() {
   const disclosure: Record<number, { which: Disclosure; id: string }> = {
     [UNRESOLVED_INDEX]: { which: 'unresolved', id: unresolvedId },
     [IGNORED_INDEX]: { which: 'ignored', id: ignoredId },
+    [UNUSED_INDEX]: { which: 'unused', id: unusedId },
   };
 
   return (
@@ -79,6 +87,9 @@ export function StatusBar() {
         <IssuesPanel id={unresolvedId} unresolved={unresolved} onClose={() => setOpen(null)} />
       )}
       {open === 'ignored' && <SkippedPanel id={ignoredId} skipped={skipped} onClose={() => setOpen(null)} />}
+      {open === 'unused' && deadCode && (
+        <DeadCodePanel id={unusedId} dead={deadCode} onClose={() => setOpen(null)} />
+      )}
       <div className="statusbar__line">
         <div role="status" className={clean ? 'status-line' : 'status-line status-line--warn'}>
           <Icon name={clean ? 'check' : 'warning'} />
