@@ -9,7 +9,7 @@ export function createHandler(core: CoreModule): (method: Method, args: unknown[
   let analyzer: Analyzer | null = null;
 
   const session = (): Analyzer => {
-    if (!analyzer) throw new Error('sessão não iniciada');
+    if (!analyzer) throw new Error('session not started');
     return analyzer;
   };
 

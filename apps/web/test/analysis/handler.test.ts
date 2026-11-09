@@ -59,9 +59,9 @@ describe('createHandler', () => {
     expect(h('detail', [999_999])).toBeNull();
   });
 
-  it('método antes de start lança sessão não iniciada', () => {
+  it('método antes de start lança session not started', () => {
     const h = createHandler(core);
-    expect(() => h('view', [[0]])).toThrow('sessão não iniciada');
+    expect(() => h('view', [[0]])).toThrow('session not started');
   });
 
   it('um segundo start zera a sessão', () => {
@@ -83,9 +83,9 @@ describe('respond', () => {
 
   it('erro comum vira ok:false', () => {
     const h = () => {
-      throw new Error('sessão não iniciada');
+      throw new Error('session not started');
     };
-    expect(respond(h, req)).toEqual({ id: 7, ok: false, error: 'sessão não iniciada' });
+    expect(respond(h, req)).toEqual({ id: 7, ok: false, error: 'session not started' });
   });
 
   it('WebAssembly.RuntimeError (pânico) vira frame fatal', () => {

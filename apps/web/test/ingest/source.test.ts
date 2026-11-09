@@ -22,6 +22,12 @@ describe('fromFileList', () => {
     );
     expect(await src.read('src/a.ts')).toBe('abc');
   });
+
+  it('arquivo ausente rejeita com mensagem técnica em inglês', async () => {
+    const src = fromFileList([file('proj/src/a.ts', 'abc')]);
+    await expect(src.read('src/zz.ts')).rejects.toThrow('file not found: src/zz.ts');
+    await expect(memorySource('p', {}).read('x.ts')).rejects.toThrow('file not found: x.ts');
+  });
 });
 
 describe('fromFileList em escala', () => {

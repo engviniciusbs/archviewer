@@ -62,10 +62,10 @@ describe('App', () => {
     const reload = vi.fn();
     vi.stubGlobal('location', { ...window.location, reload });
     const store = storeWith();
-    store.setState({ phase: 'error', error: 'o worker de análise parou' });
+    store.setState({ phase: 'error', error: 'analysis worker stopped' });
     renderWith(store, <App />);
     expect(screen.getByRole('heading', { name: 'Something went wrong in the analysis' })).toBeInTheDocument();
-    expect(screen.getByText('o worker de análise parou')).toHaveClass('mono');
+    expect(screen.getByText('analysis worker stopped')).toHaveClass('mono');
     const btn = screen.getByRole('button', { name: 'Reload' });
     expect(btn).toHaveClass('key--primary');
     await userEvent.click(btn);

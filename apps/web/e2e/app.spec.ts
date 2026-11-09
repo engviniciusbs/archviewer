@@ -18,27 +18,27 @@ test('abre o sample-project e navega pela arquitetura', async ({ page }) => {
   await page.goto('/');
 
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Abrir projeto' }).click();
+  await page.getByRole('button', { name: 'Open project' }).click();
   await (await chooser).setFiles(SAMPLE);
 
   // Resumo na barra de status.
   const status = page.getByRole('status');
-  await expect(status).toContainText('8 arquivos');
-  await expect(status).toContainText('1 ciclo');
-  await expect(status).toContainText('2 externos');
+  await expect(status).toContainText('8 files');
+  await expect(status).toContainText('1 cycle');
+  await expect(status).toContainText('2 externals');
   await expect(
-    page.getByText('Seu navegador não tem acesso direto a pastas; usando o seletor de arquivos.'),
+    page.getByText("Your browser can't access folders directly; using the file picker."),
   ).toBeVisible();
 
   // O grafo desenhou um canvas com tamanho real.
-  const canvas = page.getByRole('main', { name: 'Grafo de dependências' }).locator('canvas').first();
+  const canvas = page.getByRole('main', { name: 'Dependency graph' }).locator('canvas').first();
   await expect(canvas).toBeAttached();
   await expect
     .poll(async () => (await canvas.boundingBox())?.height ?? 0)
     .toBeGreaterThan(50);
 
   // Grupos de topo no explorador.
-  const tree = page.getByRole('tree', { name: 'Arquivos do projeto' });
+  const tree = page.getByRole('tree', { name: 'Project files' });
   const items = tree.getByRole('treeitem');
   await expect(items.first()).toBeVisible();
   const groups = tree.locator('[role="treeitem"][data-kind="group"][aria-level="1"]');
@@ -58,23 +58,29 @@ test('abre o sample-project e navega pela arquitetura', async ({ page }) => {
   await expect(children.filter({ hasText: 'b.ts' })).toBeVisible();
 
   // Seleciona lazy.ts pela busca.
-  await page.getByRole('combobox', { name: 'Buscar arquivo ou pasta' }).fill('lazy.ts');
+  await page.getByRole('combobox', { name: 'Search file or folder' }).fill('lazy.ts');
   await page.getByRole('option', { name: /lazy\.ts/ }).first().click();
   const detail = page.getByRole('complementary').or(page.locator('.panel--detail'));
   await expect(detail.getByText('src/dynamic/lazy.ts').first()).toBeVisible();
   await expect(detail.getByTestId('fan-in')).toBeVisible();
   await expect(detail.getByTestId('fan-out')).toHaveText('2');
-  await expect(detail.getByRole('list', { name: 'Imports' }).getByText('dinâmico')).toHaveCount(2);
+  await expect(detail.getByRole('list', { name: 'Imports' }).getByText('dynamic')).toHaveCount(2);
 
   // Não resolvidos: 1 item, motivo asset; "Ocultar assets" esconde.
-  await page.getByRole('button', { name: /não resolvido/ }).click();
-  const issues = page.getByRole('region', { name: 'Não resolvidos' });
+  await page.getByRole('button', { name: /unresolved/ }).click();
+  const issues = page.getByRole('region', { name: 'Unresolved' });
   const rows = issues.getByRole('table').locator('tbody tr');
   await expect(rows).toHaveCount(1);
   await expect(rows.first()).toContainText('asset');
-  await page.getByRole('button', { name: 'Ocultar assets' }).click();
+  await page.getByRole('button', { name: 'Hide assets' }).click();
   await expect(issues.getByRole('table')).toHaveCount(0);
-  await expect(issues.getByText('Todos os imports apontam para um arquivo ou pacote.')).toBeVisible();
+  await expect(issues.getByText('Every import points to a file or a package.')).toBeVisible();
+
+  // Troca para português: a interface e os números mudam sem reabrir o projeto.
+  await page.getByRole('combobox', { name: 'Language' }).selectOption({ label: 'Português' });
+  await expect(status).toContainText('8 arquivos');
+  await expect(page.getByRole('button', { name: 'Abrir projeto' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'pt-BR');
 
   expect(problems).toEqual([]);
 });

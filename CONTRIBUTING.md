@@ -79,6 +79,19 @@ Without Playwright's Chromium you can use an installed browser: `PW_CHANNEL=msed
 - **Privacy is a feature.** The app must never send code, paths or metrics over the network.
 - **Accessibility matters.** Keep keyboard navigation and ARIA roles working; the e2e test relies on them.
 
+## Translating ArchViewer
+
+The interface text lives in `apps/web/src/i18n/messages/`. `en.ts` is the reference, and every other language must have exactly the same keys; TypeScript reports anything missing or extra.
+
+To add a language (Spanish, for example):
+
+1. Copy `messages/en.ts` to `messages/es.ts`, rename the export to `es`, set `const L = 'es'`, and end the object with `satisfies Messages` (see `pt-BR.ts`).
+2. Translate the strings. Keep the function signatures: plurals go through `plural(L, n, { one: '# file', other: '# files' })`, which uses the browser's `Intl.PluralRules`; add exact forms like `'=0'` only when your language needs them.
+3. Register it in `apps/web/src/i18n/locales.ts` with its code and its name written in the language itself (`{ code: 'es', name: 'Español', messages: es }`).
+4. Run `pnpm --filter @archviewer/web typecheck` and `pnpm --filter @archviewer/web test`. The tests check that every language translates every warning the core can emit.
+
+The app picks the language from the saved choice, then the browser languages, then English. Warnings from the Rust core arrive as a code plus a subject (`{ code: 'invalidTsconfig', subject: 'tsconfig.json' }`), so they are translated here too; technical error messages stay in English.
+
 ## Commits and pull requests
 
 Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) with a scope:
