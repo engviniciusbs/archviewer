@@ -27,6 +27,7 @@ export const en = {
     tree: 'Project files',
     empty: 'No files to show.',
     inCycle: 'in a cycle',
+    unused: 'unused',
     noHits: (q: string) => `Nothing found for “${q}”.`,
     noHitsHint: 'Search looks at the names and paths of files and folders.',
     clear: 'Clear search',
@@ -135,6 +136,15 @@ export const en = {
     progress: 'Reading progress',
     readProject: 'Read project',
     cancel: 'Cancel',
+  },
+  heat: {
+    label: 'Color by',
+    none: 'None',
+    fanIn: 'Fan-in',
+    fanOut: 'Fan-out',
+    loc: 'Lines',
+    unused: 'Unused',
+    testOnly: 'Used only by tests',
   },
   export: {
     button: 'Export',

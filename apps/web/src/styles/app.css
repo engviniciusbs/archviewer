@@ -581,6 +581,63 @@
   margin-left: auto;
   color: var(--color-error);
 }
+.row__metric {
+  margin-left: auto;
+  padding-left: var(--space-xs);
+  color: var(--color-ink-2);
+  font-size: var(--text-xs);
+}
+.row__metric + .tree__cycle {
+  margin-left: var(--space-2xs);
+}
+.tree__unused {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-2xs);
+}
+.tree__unused-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-unused);
+}
+
+/* ---- heatmap legend --------------------------------------------------- */
+
+.legend {
+  position: absolute;
+  z-index: var(--z-raised);
+  left: var(--space-sm);
+  bottom: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-paper);
+  box-shadow: var(--shadow-card);
+  font-size: var(--text-xs);
+}
+.legend__title {
+  margin: 0 0 var(--space-2xs);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+.legend__items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-ink-2);
+}
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+.legend__swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
 
 /* ---- detail ----------------------------------------------------------- */
 

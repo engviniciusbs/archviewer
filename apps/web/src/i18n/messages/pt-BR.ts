@@ -26,6 +26,7 @@ export const ptBR = {
     tree: 'Arquivos do projeto',
     empty: 'Nenhum arquivo para mostrar.',
     inCycle: 'em ciclo',
+    unused: 'sem uso',
     noHits: (q: string) => `Nada encontrado para “${q}”.`,
     noHitsHint: 'A busca olha nomes e caminhos de arquivos e pastas.',
     clear: 'Limpar busca',
@@ -126,6 +127,15 @@ export const ptBR = {
     progress: 'Progresso da leitura',
     readProject: 'Ler projeto',
     cancel: 'Cancelar',
+  },
+  heat: {
+    label: 'Colorir por',
+    none: 'Nenhum',
+    fanIn: 'Fan-in',
+    fanOut: 'Fan-out',
+    loc: 'Linhas',
+    unused: 'Sem uso',
+    testOnly: 'Só usado por testes',
   },
   export: {
     button: 'Exportar',

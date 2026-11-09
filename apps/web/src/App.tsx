@@ -3,6 +3,7 @@ import { EmptyScreen } from './components/EmptyScreen';
 import { ErrorScreen } from './components/ErrorScreen';
 import { Explorer } from './components/Explorer';
 import { GraphErrorBoundary } from './components/GraphErrorBoundary';
+import { HeatLegend } from './components/HeatLegend';
 import { LoadingScreen } from './components/LoadingScreen';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
@@ -20,6 +21,7 @@ function Shell() {
         <GraphErrorBoundary>
           <GraphCanvas />
         </GraphErrorBoundary>
+        <HeatLegend />
       </main>
       <DetailPanel />
       <StatusBar />

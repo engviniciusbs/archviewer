@@ -7,7 +7,8 @@ import { svgToPng } from '../export/png';
 import { currentScene, hasSceneSource } from '../export/scene';
 import { buildSvg } from '../export/svg';
 import { useT } from '../i18n/store';
-import { canvasToRgb, readTheme } from '../renderer/theme';
+import { heatLegend, type Legend } from '../renderer/heat';
+import { canvasToRgb, readTheme, type GraphTheme } from '../renderer/theme';
 import { useGraphStore, useGraphStoreApi } from '../store/graph-store';
 import { renderable } from '../store/selectors';
 import { message } from './format';
@@ -16,10 +17,11 @@ type ItemId = 'png' | 'svg' | 'mermaid' | 'json' | 'badge';
 const ITEMS: ItemId[] = ['png', 'svg', 'mermaid', 'json', 'badge'];
 const STATUS_MS = 5000;
 
-function svgOfCurrentView(): string {
+function svgOfCurrentView(legendFor: (theme: GraphTheme) => Legend | null): string {
   const scene = currentScene();
   if (!scene) throw new Error('no graph canvas');
-  return buildSvg(scene, readTheme(document.documentElement, canvasToRgb));
+  const theme = readTheme(document.documentElement, canvasToRgb);
+  return buildSvg(scene, theme, legendFor(theme));
 }
 
 /** Texto para copiar à mão quando a área de transferência não está disponível. */
@@ -62,6 +64,7 @@ export function ExportMenu() {
   const filters = useGraphStore((s) => s.filters);
   const summary = useGraphStore((s) => s.summary);
   const projectName = useGraphStore((s) => s.projectName);
+  const colorBy = useGraphStore((s) => s.colorBy);
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState('');
   const [manual, setManual] = useState<string | null>(null);
@@ -72,6 +75,7 @@ export function ExportMenu() {
   const hintId = useId();
 
   const view = renderable(graph, filters);
+  const legendFor = (theme: GraphTheme) => heatLegend(colorBy, view.nodes, t, theme);
   const reason = (id: ItemId): string | null => {
     if (id === 'png' || id === 'svg') {
       if (!hasSceneSource()) return t.export.noCanvas;
@@ -117,13 +121,13 @@ export function ExportMenu() {
       switch (id) {
         case 'png': {
           const name = exportFileName(projectName, 'png');
-          download(await svgToPng(svgOfCurrentView()), name);
+          download(await svgToPng(svgOfCurrentView(legendFor)), name);
           setStatus(t.export.downloaded(name));
           break;
         }
         case 'svg': {
           const name = exportFileName(projectName, 'svg');
-          download(new Blob([svgOfCurrentView()], { type: 'image/svg+xml' }), name);
+          download(new Blob([svgOfCurrentView(legendFor)], { type: 'image/svg+xml' }), name);
           setStatus(t.export.downloaded(name));
           break;
         }

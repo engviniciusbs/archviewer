@@ -18,6 +18,9 @@ const theme: GraphTheme = {
   accentWash: 'rgb(9, 9, 9)',
   error: 'rgb(10, 10, 10)',
   labelFont: 'sans-serif',
+  heat: ['h1', 'h2', 'h3', 'h4', 'h5'],
+  unused: 'u',
+  testOnly: 't',
 };
 
 const node = (id: number, kind: VNode['kind'], extra: Partial<VNode> = {}): VNode => ({
@@ -68,6 +71,16 @@ describe('syncGraph', () => {
     expect(g.getNodeAttribute('1', 'nodeId')).toBe(1);
     expect(g.getEdgeAttribute('1->5', 'color')).toBe(theme.error);
     expect(g.getEdgeAttribute('1->9', 'color')).toBe(theme.muted);
+  });
+
+  it('paint sobrescreve a cor-base dos nós e reaplica a cada sincronização', () => {
+    const g = mk();
+    syncGraph(g, collapsed, new PositionCache(), theme, (n) => (n.id === 1 ? { color: 'red' } : undefined));
+    expect(g.getNodeAttribute('1', 'color')).toBe('red');
+    expect(g.getNodeAttribute('5', 'color')).toBe(theme.paper2);
+    syncGraph(g, collapsed, new PositionCache(), theme, (n) => (n.id === 5 ? { borderColor: 'amber' } : undefined));
+    expect(g.getNodeAttribute('1', 'color')).toBe(theme.ink2);
+    expect(g.getNodeAttribute('5', 'borderColor')).toBe('amber');
   });
 
   it('arestas de ciclo ficam 1 mais grossas (até 7); as outras até 6', () => {

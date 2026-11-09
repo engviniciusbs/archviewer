@@ -1,3 +1,4 @@
+import type { Legend } from '../renderer/heat';
 import type { GraphTheme } from '../renderer/theme';
 import type { Scene } from './scene';
 
@@ -5,6 +6,9 @@ export const SVG_MAX = 1600;
 export const SVG_PAD = 40;
 const SVG_MIN = 320;
 const LABEL_SIZE = 12;
+/** Faixa da legenda do heatmap, embaixo do grafo. */
+const LEGEND_H = 56;
+const SWATCH = 12;
 
 const xml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -17,8 +21,9 @@ const fontStack = (theme: GraphTheme) => xml(`${theme.labelFont ? `${theme.label
 /**
  * SVG da cena inteira, independente do zoom: todos os nós cabem com margem `SVG_PAD`,
  * a maior dimensão vira `SVG_MAX` e o eixo y é invertido (no graphology y cresce para cima).
+ * Com `legend`, uma faixa embaixo mostra o título e as amostras do heatmap.
  */
-export function buildSvg(scene: Scene, theme: GraphTheme): string {
+export function buildSvg(scene: Scene, theme: GraphTheme, legend?: Legend | null): string {
   const xs = scene.nodes.map((n) => n.x);
   const ys = scene.nodes.map((n) => n.y);
   const minX = xs.length ? Math.min(...xs) : 0;
@@ -31,9 +36,10 @@ export function buildSvg(scene: Scene, theme: GraphTheme): string {
   const innerW = rx * scale;
   const innerH = ry * scale;
   const baseWidth = Math.max(innerW + 2 * SVG_PAD, SVG_MIN);
-  const height = Math.round(Math.max(innerH + 2 * SVG_PAD, SVG_MIN));
+  const graphH = Math.round(Math.max(innerH + 2 * SVG_PAD, SVG_MIN));
+  const height = legend ? graphH + LEGEND_H : graphH;
   const offX = (baseWidth - innerW) / 2;
-  const offY = (height - innerH) / 2;
+  const offY = (graphH - innerH) / 2;
   const px = (x: number) => offX + (x - minX) * scale;
   const py = (y: number) => offY + (maxY - y) * scale;
   // Rótulos saem à direita do nó: a imagem cresce para o mais comprido caber (estimativa de 0,6 em por caractere).
@@ -88,6 +94,20 @@ export function buildSvg(scene: Scene, theme: GraphTheme): string {
     out.push(`<g font-family="${fontStack(theme)}" font-size="${LABEL_SIZE}" fill="${xml(theme.ink)}">`);
     for (const n of labels) {
       out.push(`<text x="${r1(px(n.x) + n.size + 4)}" y="${r1(py(n.y) + LABEL_SIZE / 3)}">${xml(n.label)}</text>`);
+    }
+    out.push('</g>');
+  }
+  if (legend && legend.items.length) {
+    const top = graphH;
+    out.push(`<g font-family="${fontStack(theme)}" font-size="${LABEL_SIZE}" fill="${xml(theme.ink)}">`);
+    out.push(`<text x="${SVG_PAD}" y="${top + 16}" font-weight="600">${xml(legend.title)}</text>`);
+    let x = SVG_PAD;
+    for (const item of legend.items) {
+      out.push(
+        `<rect x="${x}" y="${top + 26}" width="${SWATCH}" height="${SWATCH}" rx="2" fill="${xml(item.color)}"/>`,
+        `<text x="${x + SWATCH + 6}" y="${top + 36}">${xml(item.label)}</text>`,
+      );
+      x += SWATCH + 6 + item.label.length * LABEL_SIZE * 0.6 + 16;
     }
     out.push('</g>');
   }

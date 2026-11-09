@@ -18,6 +18,13 @@ describe('readTheme', () => {
       '--color-accent-wash': 'oklch(95% 0.02 256)',
       '--color-error': 'oklch(52% 0.19 27)',
       '--font-body': ' "IBM Plex Sans", sans-serif ',
+      '--color-heat-1': 'h1',
+      '--color-heat-2': 'h2',
+      '--color-heat-3': 'h3',
+      '--color-heat-4': 'h4',
+      '--color-heat-5': 'h5',
+      '--color-unused': 'u',
+      '--color-test-only': 't',
     };
     vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: (k: string) => values[k] ?? '' }));
     const toRgb = vi.fn((c: string) => `rgb(${c})`);
@@ -33,7 +40,9 @@ describe('readTheme', () => {
     expect(t.accentWash).toBe('rgb(oklch(95% 0.02 256))');
     expect(t.error).toBe('rgb(oklch(52% 0.19 27))');
     expect(t.labelFont).toBe('"IBM Plex Sans", sans-serif');
-    expect(toRgb).toHaveBeenCalledTimes(10);
+    expect(t.heat).toEqual(['rgb(h1)', 'rgb(h2)', 'rgb(h3)', 'rgb(h4)', 'rgb(h5)']);
+    expect([t.unused, t.testOnly]).toEqual(['rgb(u)', 'rgb(t)']);
+    expect(toRgb).toHaveBeenCalledTimes(17);
   });
 
   it('canvasToRgb returns the input when there is no canvas', () => {

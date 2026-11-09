@@ -9,7 +9,13 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 export const nodeKey = (id: number) => String(id);
 export const edgeKey = (from: number, to: number) => `${from}->${to}`;
 
-function nodeVisual(n: VNode, theme: GraphTheme): Record<string, unknown> {
+export type Paint = (n: VNode) => { color?: string; borderColor?: string } | undefined;
+
+function nodeVisual(n: VNode, theme: GraphTheme, paint?: Paint): Record<string, unknown> {
+  return { ...baseVisual(n, theme), ...paint?.(n) };
+}
+
+function baseVisual(n: VNode, theme: GraphTheme): Record<string, unknown> {
   const base = { label: n.label, nodeId: n.id, kind: n.kind, expandable: n.expandable, expanded: n.expanded };
   if (n.kind === 'group') {
     return {
@@ -45,6 +51,7 @@ export function syncGraph(
   r: Renderable,
   cache: PositionCache,
   theme: GraphTheme,
+  paint?: Paint,
 ): { added: number[]; removed: number[] } {
   const wantNodes = new Map(r.nodes.map((n) => [nodeKey(n.id), n]));
   const wantEdges = new Map(r.edges.map((e) => [edgeKey(e.from, e.to), e]));
@@ -95,12 +102,12 @@ export function syncGraph(
   const added: number[] = [];
   for (const n of fresh) {
     const p = spots.get(n.id)!;
-    g.addNode(nodeKey(n.id), { ...nodeVisual(n, theme), x: p.x, y: p.y });
+    g.addNode(nodeKey(n.id), { ...nodeVisual(n, theme, paint), x: p.x, y: p.y });
     added.push(n.id);
   }
   const addedSet = new Set(added);
   for (const n of r.nodes) {
-    if (!addedSet.has(n.id)) g.mergeNodeAttributes(nodeKey(n.id), nodeVisual(n, theme));
+    if (!addedSet.has(n.id)) g.mergeNodeAttributes(nodeKey(n.id), nodeVisual(n, theme, paint));
   }
 
   for (const [key, e] of wantEdges) {

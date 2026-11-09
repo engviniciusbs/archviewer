@@ -6,7 +6,8 @@ import { createAnalysisClient, type AnalysisApi } from '../analysis/client';
 import { scan } from '../ingest/scan';
 import { readInto, type IngestSkip, type ReadProgress } from '../ingest/read';
 import type { DirSource } from '../ingest/source';
-import { readFilters, writeFilters } from './url';
+import type { ColorBy } from '../renderer/heat';
+import { readColorBy, readFilters, writeFilters } from './url';
 
 export type Phase = 'empty' | 'scanning' | 'confirm' | 'reading' | 'analyzing' | 'ready' | 'error';
 export type Filters = {
@@ -37,6 +38,8 @@ export interface GraphState {
   /** Id cujo detalhe não pôde ser carregado (resposta nula ou falha); null = sem falha. */
   detailError: number | null;
   filters: Filters;
+  /** Métrica do heatmap; 'none' mantém as cores padrão. Vai para a URL como `color=`. */
+  colorBy: ColorBy;
   focusRequest: { id: number; seq: number } | null;
   /** Busca ativa, compartilhada entre a toolbar e o explorador; null = sem busca. */
   searchResults: SearchResults | null;
@@ -47,6 +50,7 @@ export interface GraphState {
   select(id: number | null): Promise<void>;
   reveal(hit: SearchHit): Promise<void>;
   setFilter<K extends keyof Filters>(k: K, v: boolean): void;
+  setColorBy(c: ColorBy): void;
   /** Busca no cliente atual; [] sem projeto pronto, com busca vazia ou em falha. */
   search(query: string): Promise<SearchHit[]>;
   setSearchResults(r: SearchResults | null): void;
@@ -76,10 +80,18 @@ function initialFilters(): Filters {
   }
 }
 
-function writeUrl(f: Filters): void {
+function initialColorBy(): ColorBy {
+  try {
+    return readColorBy(typeof location === 'undefined' ? '' : location.search);
+  } catch {
+    return 'none';
+  }
+}
+
+function writeUrl(f: Filters, c: ColorBy): void {
   try {
     if (typeof history === 'undefined' || typeof location === 'undefined') return;
-    history.replaceState(history.state, '', `${location.pathname}${writeFilters(f)}${location.hash}`);
+    history.replaceState(history.state, '', `${location.pathname}${writeFilters(f, c)}${location.hash}`);
   } catch {
     // ambiente sem history: a URL é só uma conveniência.
   }
@@ -94,11 +106,13 @@ type DataState = Omit<
   | 'select'
   | 'reveal'
   | 'setFilter'
+  | 'setColorBy'
   | 'search'
   | 'setSearchResults'
   | 'exportGraph'
   | 'reset'
   | 'filters'
+  | 'colorBy'
 >;
 
 const initialData = (): DataState => ({
@@ -204,6 +218,7 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
     return {
       ...initialData(),
       filters: initialFilters(),
+      colorBy: initialColorBy(),
 
       async openProject(source, fallback) {
         teardown();
@@ -325,7 +340,12 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
       setFilter(k, v) {
         const filters = { ...get().filters, [k]: v };
         set({ filters });
-        writeUrl(filters);
+        writeUrl(filters, get().colorBy);
+      },
+
+      setColorBy(colorBy) {
+        set({ colorBy });
+        writeUrl(get().filters, colorBy);
       },
 
       async search(query) {

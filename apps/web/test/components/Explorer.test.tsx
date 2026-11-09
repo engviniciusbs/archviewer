@@ -18,6 +18,35 @@ async function setup() {
   return { store, toggle, select, reveal };
 }
 
+describe('Explorer com heatmap', () => {
+  it('mostra o valor da métrica ativa em cada linha', async () => {
+    const { store } = await setup();
+    const graph = store.getState().graph;
+    store.setState({
+      colorBy: 'loc',
+      graph: {
+        ...graph,
+        nodes: graph.nodes.map((n) => (n.id === 2 ? { ...n, metrics: { ...n.metrics, loc: 1234 } } : n)),
+      },
+    });
+    renderWith(store, <Explorer />);
+    expect(screen.getByRole('treeitem', { name: /a\.ts/ })).toHaveTextContent('1,234');
+  });
+
+  it('marca arquivos sem uso no modo unused e sempre com texto acessível', async () => {
+    const { store } = await setup();
+    const graph = store.getState().graph;
+    store.setState({
+      graph: {
+        ...graph,
+        nodes: graph.nodes.map((n) => (n.id === 3 ? { ...n, metrics: { ...n.metrics, unused: 1 } } : n)),
+      },
+    });
+    renderWith(store, <Explorer />);
+    expect(screen.getByRole('treeitem', { name: /b\.ts/ })).toHaveTextContent('unused');
+  });
+});
+
 describe('Explorer', () => {
   it('renderiza explorerRows como tree, com aria-expanded nos grupos', async () => {
     const { store } = await setup();

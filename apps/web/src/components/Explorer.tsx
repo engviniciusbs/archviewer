@@ -2,6 +2,7 @@ import { useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { SearchHit, VNode } from '@archviewer/core-wasm';
 import { useT } from '../i18n/store';
 import { useGraphStore, type SearchResults } from '../store/graph-store';
+import { metricOf } from '../renderer/heat';
 import { explorerRows } from '../store/selectors';
 import { Icon, type IconName } from './Icon';
 import { Panel } from './Panel';
@@ -47,6 +48,7 @@ function Tree() {
   const graph = useGraphStore((s) => s.graph);
   const hideExternals = useGraphStore((s) => s.filters.hideExternals);
   const selected = useGraphStore((s) => s.selected);
+  const colorBy = useGraphStore((s) => s.colorBy);
   const toggle = useGraphStore((s) => s.toggle);
   const select = useGraphStore((s) => s.select);
   const [focusId, setFocusId] = useState<number | null>(null);
@@ -137,6 +139,15 @@ function Tree() {
           </span>
           <Icon name={kindIcon(node)} className="row__icon" />
           <span className="row__label">{node.label}</span>
+          {node.kind === 'file' && node.metrics.unused > 0 && (
+            <span className="tree__unused">
+              <span className="tree__unused-dot" aria-hidden="true" />
+              <span className="visually-hidden">{t.explorer.unused}</span>
+            </span>
+          )}
+          {colorBy !== 'none' && colorBy !== 'unused' && metricOf(node, colorBy) !== null && (
+            <span className="row__metric num">{t.fmt.int(metricOf(node, colorBy)!)}</span>
+          )}
           {node.inCycle && (
             <span className="tree__cycle">
               <Icon name="cycle" />

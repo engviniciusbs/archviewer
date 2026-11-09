@@ -15,6 +15,9 @@ const theme: GraphTheme = {
   accentWash: 'rgb(230, 240, 255)',
   error: 'rgb(200, 30, 30)',
   labelFont: 'IBM Plex Sans',
+  heat: ['rgb(1, 1, 1)', 'rgb(2, 2, 2)', 'rgb(3, 3, 3)', 'rgb(4, 4, 4)', 'rgb(5, 5, 5)'],
+  unused: 'rgb(193, 122, 0)',
+  testOnly: 'rgb(222, 161, 67)',
 };
 
 const n = (x: number, y: number, o: Partial<SceneNode> = {}): SceneNode => ({
@@ -75,6 +78,15 @@ describe('buildSvg', () => {
       theme,
     );
     expect(svg).toMatch(/<marker[^>]*markerUnits="userSpaceOnUse"/);
+  });
+
+  it('desenha a legenda do heatmap quando recebe uma', () => {
+    const legend = { title: 'Lines', items: [{ color: 'rgb(9, 9, 9)', label: '1–3' }, { color: 'rgb(8, 8, 8)', label: '4–9' }] };
+    const svg = buildSvg({ nodes: [n(0, 0), n(10, 10)], edges: [] }, theme, legend);
+    expect(svg).toContain('>Lines</text>');
+    expect(svg).toContain('>1–3</text>');
+    expect(svg).toContain('fill="rgb(9, 9, 9)"');
+    expect(svg).toContain('fill="rgb(8, 8, 8)"');
   });
 
   it('escapa XML nos rótulos', () => {
