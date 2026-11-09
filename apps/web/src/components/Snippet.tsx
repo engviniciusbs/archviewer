@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { DepRef } from '@archviewer/core-wasm';
+import { useT } from '../i18n/store';
 import type { DirSource } from '../ingest/source';
 
 const MAX_LINES = 40;
@@ -48,6 +49,7 @@ export function importLineMatches(line: string, from: string, imports: DepRef[])
 type Loaded = { path: string; lines: string[] } | { path: string; failed: true };
 
 export function Snippet(p: { source: DirSource; path: string; imports: DepRef[] }) {
+  const t = useT();
   const { source, path } = p;
   const [loaded, setLoaded] = useState<Loaded | null>(null);
 
@@ -70,13 +72,13 @@ export function Snippet(p: { source: DirSource; path: string; imports: DepRef[] 
   }, [source, path]);
 
   if (!loaded || loaded.path !== path) {
-    return <div className="snippet snippet--loading graphite" aria-busy="true" aria-label="Carregando trecho" />;
+    return <div className="snippet snippet--loading graphite" aria-busy="true" aria-label={t.snippet.loading} />;
   }
   if ('failed' in loaded) {
-    return <p className="snippet__error muted">Não foi possível ler o arquivo</p>;
+    return <p className="snippet__error muted">{t.snippet.error}</p>;
   }
   return (
-    <pre className="snippet graphite" aria-label={`Primeiras ${loaded.lines.length} linhas de ${path}`}>
+    <pre className="snippet graphite" aria-label={t.snippet.label(loaded.lines.length, path)}>
       <code>
         {loaded.lines.map((line, i) => (
           <span

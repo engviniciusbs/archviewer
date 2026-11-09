@@ -48,23 +48,23 @@ describe('DetailPanel', () => {
   it('sem seleção mostra o estado vazio', async () => {
     const { store } = await setup(null);
     renderWith(store, <DetailPanel />);
-    expect(screen.getByText('Selecione um nó no grafo ou no explorador')).toBeInTheDocument();
+    expect(screen.getByText('Select a node in the graph or the explorer')).toBeInTheDocument();
   });
 
   it('falha ao carregar mostra o erro em vez do esqueleto', async () => {
     const { store } = await setup(null, 2);
     store.setState({ detailError: 2 });
     renderWith(store, <DetailPanel />);
-    expect(screen.getByText('Não foi possível carregar os detalhes')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Carregando detalhes')).not.toBeInTheDocument();
+    expect(screen.getByText("Couldn't load the details")).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading details')).not.toBeInTheDocument();
   });
 
   it('falha de outro id não vale para a seleção atual', async () => {
     const { store } = await setup(null, 2);
     store.setState({ detailError: 3 });
     renderWith(store, <DetailPanel />);
-    expect(screen.getByLabelText('Carregando detalhes')).toBeInTheDocument();
-    expect(screen.queryByText('Não foi possível carregar os detalhes')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Loading details')).toBeInTheDocument();
+    expect(screen.queryByText("Couldn't load the details")).not.toBeInTheDocument();
   });
 
   it('arquivo: caminho em mono e fan-in/fan-out como números', async () => {
@@ -73,7 +73,7 @@ describe('DetailPanel', () => {
     expect(screen.getByRole('heading', { name: 'a.ts' })).toBeInTheDocument();
     const path = screen.getByText('src/a.ts', { selector: 'code' });
     expect(path).toHaveClass('mono');
-    expect(screen.getByTestId('fan-in')).toHaveTextContent('1.234');
+    expect(screen.getByTestId('fan-in')).toHaveTextContent('1,234');
     expect(screen.getByTestId('fan-out')).toHaveTextContent('2');
     expect(screen.getByTestId('fan-in')).toHaveClass('figure');
   });
@@ -88,7 +88,7 @@ describe('DetailPanel', () => {
     await userEvent.click(within(imports).getByRole('button', { name: 'lib/util.ts' }));
     expect(api.find).toHaveBeenCalledWith('lib/util.ts', 50);
     expect(reveal).toHaveBeenCalledWith(hidden);
-    const dependents = screen.getByRole('list', { name: 'Dependentes' });
+    const dependents = screen.getByRole('list', { name: 'Dependents' });
     await userEvent.click(within(dependents).getByRole('button', { name: 'src/b.ts' }));
     expect(select).toHaveBeenCalledTimes(2);
   });
@@ -103,16 +103,16 @@ describe('DetailPanel', () => {
   it('avisa quando o arquivo está num ciclo', async () => {
     const { store } = await setup(fileDetail());
     renderWith(store, <DetailPanel />);
-    expect(screen.queryByText(/Faz parte de um ciclo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Part of a cycle/)).not.toBeInTheDocument();
     store.setState({ detail: fileDetail({ cycle: ['src/a.ts', 'src/b.ts', 'src/a.ts'] }) });
-    expect(await screen.findByText(/Faz parte de um ciclo/)).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Ciclo' })).toHaveTextContent('src/b.ts');
+    expect(await screen.findByText(/Part of a cycle/)).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Cycle' })).toHaveTextContent('src/b.ts');
   });
 
   it('"Recolher pasta" aparece quando o pai é um grupo expandido que não é a raiz', async () => {
     const { store, toggle } = await setup(fileDetail());
     renderWith(store, <DetailPanel />);
-    await userEvent.click(screen.getByRole('button', { name: 'Recolher pasta' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Collapse folder' }));
     expect(toggle).toHaveBeenCalledWith(1);
   });
 
@@ -131,7 +131,7 @@ describe('DetailPanel', () => {
     };
     const { store } = await setup(lib);
     renderWith(store, <DetailPanel />);
-    expect(screen.queryByRole('button', { name: 'Recolher pasta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Collapse folder' })).not.toBeInTheDocument();
   });
 
   it('grupo: fileCount, loc e as maiores dependências', async () => {
@@ -150,11 +150,11 @@ describe('DetailPanel', () => {
     const { store, select } = await setup(group);
     renderWith(store, <DetailPanel />);
     expect(screen.getByTestId('file-count')).toHaveTextContent('3');
-    expect(screen.getByTestId('loc')).toHaveTextContent('1.200');
-    const out = screen.getByRole('list', { name: 'Maiores dependências de saída' });
+    expect(screen.getByTestId('loc')).toHaveTextContent('1,200');
+    const out = screen.getByRole('list', { name: 'Largest outgoing dependencies' });
     expect(out).toHaveTextContent('src');
     expect(out).toHaveTextContent('5');
-    const inc = screen.getByRole('list', { name: 'Maiores dependências de entrada' });
+    const inc = screen.getByRole('list', { name: 'Largest incoming dependencies' });
     await userEvent.click(within(inc).getByRole('button', { name: /react/ }));
     expect(select).toHaveBeenCalledWith(9);
   });
@@ -169,7 +169,7 @@ describe('DetailPanel', () => {
     const { store, select } = await setup(ext);
     renderWith(store, <DetailPanel />);
     expect(screen.getByRole('heading', { name: 'react' })).toBeInTheDocument();
-    const by = screen.getByRole('list', { name: 'Importado por' });
+    const by = screen.getByRole('list', { name: 'Imported by' });
     await userEvent.click(within(by).getByRole('button', { name: 'src/a.ts' }));
     expect(select).toHaveBeenCalledWith(2);
   });

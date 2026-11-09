@@ -1,8 +1,9 @@
 import { useId, useState } from 'react';
-import type { Summary } from '@archviewer/core-wasm';
+import type { Summary, Warning } from '@archviewer/core-wasm';
+import type { Messages } from '../i18n/messages/en';
+import { useT } from '../i18n/store';
 import { useGraphStore } from '../store/graph-store';
 import { visibleUnresolved } from '../store/selectors';
-import { count, seconds } from './format';
 import { Icon } from './Icon';
 import { IssuesPanel, SkippedPanel } from './IssuesPanel';
 
@@ -13,18 +14,26 @@ type StatusInput = Pick<Summary, 'files' | 'edges' | 'cycles' | 'externals'> & {
 };
 
 /** Os itens da barra, na ordem e no formato de que o e2e depende. */
-export function statusItems(s: StatusInput): string[] {
+export function statusItems(s: StatusInput, t: Messages): string[] {
   const items = [
-    count(s.files, 'arquivo', 'arquivos'),
-    count(s.edges, 'aresta', 'arestas'),
-    count(s.cycles, 'ciclo', 'ciclos'),
-    count(s.externals, 'externo', 'externos'),
-    count(s.unresolvedShown, 'não resolvido', 'não resolvidos'),
-    count(s.ignored, 'ignorado', 'ignorados'),
+    t.status.files(s.files),
+    t.status.edges(s.edges),
+    t.status.cycles(s.cycles),
+    t.status.externals(s.externals),
+    t.status.unresolved(s.unresolvedShown),
+    t.status.ignored(s.ignored),
   ];
-  if (s.elapsedMs !== null) items.push(seconds(s.elapsedMs));
+  if (s.elapsedMs !== null) items.push(t.fmt.seconds(s.elapsedMs));
   return items;
 }
+
+/** Texto de um aviso do núcleo; um código que esta versão da interface não conhece vira `code: subject`. */
+export function warningText(t: Messages, w: Warning): string {
+  const text = (t.warnings as Partial<Messages['warnings']>)[w.code];
+  return text ? text(w.subject) : `${w.code}: ${w.subject}`;
+}
+
+const warningKey = (w: Warning) => `${w.code}\u0000${w.subject}`;
 
 const UNRESOLVED_INDEX = 4;
 const IGNORED_INDEX = 5;
@@ -32,6 +41,7 @@ const IGNORED_INDEX = 5;
 type Disclosure = 'unresolved' | 'ignored';
 
 export function StatusBar() {
+  const t = useT();
   const summary = useGraphStore((s) => s.summary);
   const issues = useGraphStore((s) => s.issues);
   const filters = useGraphStore((s) => s.filters);
@@ -44,13 +54,18 @@ export function StatusBar() {
 
   if (!summary) return null;
   const unresolved = issues ? visibleUnresolved(issues, filters) : [];
-  const items = statusItems({
-    ...summary,
-    unresolvedShown: issues ? unresolved.length : summary.unresolved,
-    ignored: summary.skipped + ingestSkipped.length,
-    elapsedMs,
-  });
-  const warnings = [...new Set([...(issues?.warnings ?? []), ...summary.warnings])];
+  const items = statusItems(
+    {
+      ...summary,
+      unresolvedShown: issues ? unresolved.length : summary.unresolved,
+      ignored: summary.skipped + ingestSkipped.length,
+      elapsedMs,
+    },
+    t,
+  );
+  const warnings = [
+    ...new Map([...(issues?.warnings ?? []), ...summary.warnings].map((w) => [warningKey(w), w])).values(),
+  ];
   const clean = unresolved.length === 0 && warnings.length === 0;
   const skipped = [...(issues?.skipped ?? []), ...ingestSkipped];
   const disclosure: Record<number, { which: Disclosure; id: string }> = {
@@ -67,7 +82,7 @@ export function StatusBar() {
       <div className="statusbar__line">
         <div role="status" className={clean ? 'status-line' : 'status-line status-line--warn'}>
           <Icon name={clean ? 'check' : 'warning'} />
-          <span className="visually-hidden">{clean ? 'Análise completa' : 'Análise completa, com pendências'}</span>
+          <span className="visually-hidden">{clean ? t.status.complete : t.status.completeWithIssues}</span>
           <ul className="statusbar__items">
             {items.map((text, i) => (
               <li key={i} className="num">
@@ -94,16 +109,16 @@ export function StatusBar() {
         {fallback && (
           <p className="statusbar__note">
             <Icon name="info" />
-            Seu navegador não tem acesso direto a pastas; usando o seletor de arquivos.
+            {t.status.fallback}
           </p>
         )}
       </div>
       {warnings.length > 0 && (
-        <ul className="statusbar__warnings" aria-label="Avisos">
+        <ul className="statusbar__warnings" aria-label={t.status.warnings}>
           {warnings.map((w) => (
-            <li key={w} className="status-line status-line--warn">
+            <li key={warningKey(w)} className="status-line status-line--warn">
               <Icon name="warning" />
-              {w}
+              {warningText(t, w)}
             </li>
           ))}
         </ul>

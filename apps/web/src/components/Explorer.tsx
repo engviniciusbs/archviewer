@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { SearchHit, VNode } from '@archviewer/core-wasm';
+import { useT } from '../i18n/store';
 import { useGraphStore, type SearchResults } from '../store/graph-store';
 import { explorerRows } from '../store/selectors';
 import { Icon, type IconName } from './Icon';
@@ -8,6 +9,7 @@ import { Panel } from './Panel';
 const kindIcon = (n: VNode): IconName => (n.kind === 'group' ? 'folder' : n.kind === 'external' ? 'package' : 'file');
 
 function Results({ results }: { results: SearchResults }) {
+  const t = useT();
   const reveal = useGraphStore((s) => s.reveal);
   const setResults = useGraphStore((s) => s.setSearchResults);
   const pick = (hit: SearchHit) => {
@@ -17,16 +19,16 @@ function Results({ results }: { results: SearchResults }) {
   if (results.hits.length === 0) {
     return (
       <div className="panel__empty">
-        <p>Nada encontrado para “{results.query}”.</p>
-        <p className="muted">A busca olha nomes e caminhos de arquivos e pastas.</p>
+        <p>{t.explorer.noHits(results.query)}</p>
+        <p className="muted">{t.explorer.noHitsHint}</p>
         <button type="button" className="key" onClick={() => setResults(null)}>
-          Limpar busca
+          {t.explorer.clear}
         </button>
       </div>
     );
   }
   return (
-    <ul className="hits" aria-label={`Resultados para “${results.query}”`}>
+    <ul className="hits" aria-label={t.explorer.hits(results.query)}>
       {results.hits.map((h) => (
         <li key={h.id}>
           <button type="button" className="row" onClick={() => pick(h)}>
@@ -41,6 +43,7 @@ function Results({ results }: { results: SearchResults }) {
 }
 
 function Tree() {
+  const t = useT();
   const graph = useGraphStore((s) => s.graph);
   const hideExternals = useGraphStore((s) => s.filters.hideExternals);
   const selected = useGraphStore((s) => s.selected);
@@ -51,7 +54,7 @@ function Tree() {
 
   const rows = explorerRows(graph).filter((r) => !(hideExternals && r.node.kind === 'external'));
   if (rows.length === 0) {
-    return <p className="panel__empty">Nenhum arquivo para mostrar.</p>;
+    return <p className="panel__empty">{t.explorer.empty}</p>;
   }
   const ids = rows.map((r) => r.node.id);
   const tabId = [focusId, selected].find((id) => id !== null && ids.includes(id)) ?? ids[0];
@@ -107,7 +110,7 @@ function Tree() {
   };
 
   return (
-    <ul className="tree" role="tree" aria-label="Arquivos do projeto">
+    <ul className="tree" role="tree" aria-label={t.explorer.tree}>
       {rows.map(({ node, depth }, i) => (
         <li
           key={node.id}
@@ -137,7 +140,7 @@ function Tree() {
           {node.inCycle && (
             <span className="tree__cycle">
               <Icon name="cycle" />
-              <span className="visually-hidden">em ciclo</span>
+              <span className="visually-hidden">{t.explorer.inCycle}</span>
             </span>
           )}
         </li>
@@ -147,9 +150,10 @@ function Tree() {
 }
 
 export function Explorer() {
+  const t = useT();
   const results = useGraphStore((s) => s.searchResults);
   return (
-    <Panel title={results ? 'Busca' : 'Explorador'} className="panel--explorer">
+    <Panel title={results ? t.explorer.searchTitle : t.explorer.title} className="panel--explorer">
       {results ? <Results results={results} /> : <Tree />}
     </Panel>
   );

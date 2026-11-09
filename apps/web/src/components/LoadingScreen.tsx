@@ -1,8 +1,9 @@
+import { useT } from '../i18n/store';
 import { useGraphStore } from '../store/graph-store';
 import { AsciiField } from './AsciiField';
-import { formatInt } from './format';
 
 export function LoadingScreen() {
+  const t = useT();
   const phase = useGraphStore((s) => s.phase);
   const progress = useGraphStore((s) => s.progress);
   const pendingCount = useGraphStore((s) => s.pendingCount);
@@ -14,10 +15,10 @@ export function LoadingScreen() {
   else if (phase === 'analyzing') ratio = 1;
 
   const confirming = phase === 'confirm';
-  let message = 'Procurando arquivos…';
+  let message = t.loading.scanning;
   if (phase === 'reading') {
-    message = progress ? `Lendo ${formatInt(progress.read)} de ${formatInt(progress.total)} arquivos` : 'Lendo arquivos…';
-  } else if (phase === 'analyzing') message = 'Analisando imports…';
+    message = progress ? t.loading.readingProgress(progress.read, progress.total) : t.loading.reading;
+  } else if (phase === 'analyzing') message = t.loading.analyzing;
 
   return (
     <main className="loading">
@@ -26,9 +27,7 @@ export function LoadingScreen() {
       </div>
       <div className="loading__panel cut">
         {confirming ? (
-          <p className="loading__message">
-            Este projeto tem {formatInt(pendingCount)} arquivos de código. Ler mesmo assim?
-          </p>
+          <p className="loading__message">{t.loading.confirm(pendingCount)}</p>
         ) : (
           <div role="status" className="loading__message">
             <p>{message}</p>
@@ -36,7 +35,7 @@ export function LoadingScreen() {
               <div
                 className="loading__bar"
                 role="progressbar"
-                aria-label="Progresso da leitura"
+                aria-label={t.loading.progress}
                 aria-valuemin={0}
                 aria-valuemax={progress.total}
                 aria-valuenow={progress.read}
@@ -49,11 +48,11 @@ export function LoadingScreen() {
         <div className="screen__actions">
           {confirming && (
             <button type="button" className="key key--primary" onClick={() => confirmLarge(true)}>
-              Ler projeto
+              {t.loading.readProject}
             </button>
           )}
           <button type="button" className="key" onClick={cancel}>
-            Cancelar
+            {t.loading.cancel}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { useT } from '../i18n/store';
 import { Icon } from './Icon';
 
 /**
@@ -13,24 +14,28 @@ export class GraphErrorBoundary extends Component<{ children: ReactNode }, { fai
   }
 
   render() {
-    if (!this.state.failed) return this.props.children;
-    return (
-      <div className="screen screen--inline">
-        <div className="screen__panel cut">
-          <div role="alert" className="screen__message">
-            <p className="status-line status-line--error">
-              <Icon name="warning" />
-              Grafo indisponível
-            </p>
-            <p>Seu navegador não conseguiu iniciar o WebGL, necessário para desenhar o grafo.</p>
-          </div>
-          <div className="screen__actions">
-            <button type="button" className="key key--primary" onClick={() => location.reload()}>
-              Recarregar
-            </button>
-          </div>
+    return this.state.failed ? <GraphUnavailable /> : this.props.children;
+  }
+}
+
+function GraphUnavailable() {
+  const t = useT();
+  return (
+    <div className="screen screen--inline">
+      <div className="screen__panel cut">
+        <div role="alert" className="screen__message">
+          <p className="status-line status-line--error">
+            <Icon name="warning" />
+            {t.graph.unavailable}
+          </p>
+          <p>{t.graph.noWebgl}</p>
+        </div>
+        <div className="screen__actions">
+          <button type="button" className="key key--primary" onClick={() => location.reload()}>
+            {t.graph.reload}
+          </button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
