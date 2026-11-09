@@ -16,6 +16,8 @@
   /* Heatmap: rampa ordinal de um matiz (laranja; o azul é da seleção), validada contra --color-paper. */
   --color-heat-1: oklch(76% 0.13 45); --color-heat-2: oklch(69% 0.15 45); --color-heat-3: oklch(60% 0.16 45); --color-heat-4: oklch(51% 0.15 45); --color-heat-5: oklch(42% 0.13 45);
   --color-unused: oklch(64% 0.14 70); --color-test-only: oklch(75% 0.13 75);
+  /* Comparação: par categórico validado (aqua/violeta), longe do azul da seleção e do laranja do heatmap. */
+  --color-added: #1baf7a; --color-changed: #6250d6;
   --color-accent-deep: oklch(43% 0.2 262); --color-accent-edge: oklch(39% 0.16 260);
   --color-glyph-1: oklch(89% 0.025 254); --color-glyph-2: oklch(81% 0.045 255); --color-glyph-3: oklch(70% 0.085 256); --color-glyph-4: oklch(60% 0.13 257);
   --color-graphite-glyph-1: oklch(33% 0.03 262); --color-graphite-glyph-2: oklch(41% 0.05 260); --color-graphite-glyph-3: oklch(53% 0.1 258);

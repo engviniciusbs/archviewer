@@ -1,9 +1,10 @@
 import type { VNode } from '@archviewer/core-wasm';
+import type { GraphDiff } from '../compare/diff';
 import type { Messages } from '../i18n/messages/en';
 
-export type ColorBy = 'none' | 'fanIn' | 'fanOut' | 'loc' | 'unused';
-export type HeatMetric = Exclude<ColorBy, 'none' | 'unused'>;
-export const COLOR_BY: ColorBy[] = ['none', 'fanIn', 'fanOut', 'loc', 'unused'];
+export type ColorBy = 'none' | 'fanIn' | 'fanOut' | 'loc' | 'unused' | 'changes';
+export type HeatMetric = Exclude<ColorBy, 'none' | 'unused' | 'changes'>;
+export const COLOR_BY: ColorBy[] = ['none', 'fanIn', 'fanOut', 'loc', 'unused', 'changes'];
 
 export const isColorBy = (v: string | null): v is ColorBy => v !== null && (COLOR_BY as string[]).includes(v);
 
@@ -56,7 +57,7 @@ export function heatColorIndex(band: number, bands: number): number {
   return Math.round((band * (RAMP_STEPS - 1)) / (bands - 1));
 }
 
-export type HeatColors = { heat: string[]; unused: string; testOnly: string };
+export type HeatColors = { heat: string[]; unused: string; testOnly: string; added: string; changed: string };
 export type Legend = { title: string; items: { color: string; label: string }[] };
 
 const rangeLabel = (b: Band, t: Messages) =>
@@ -70,6 +71,15 @@ export function heatLegend(
   colors: HeatColors,
 ): Legend | null {
   if (colorBy === 'none') return null;
+  if (colorBy === 'changes') {
+    return {
+      title: t.heat.changes,
+      items: [
+        { color: colors.added, label: t.heat.added },
+        { color: colors.changed, label: t.heat.changed },
+      ],
+    };
+  }
   if (colorBy === 'unused') {
     return {
       title: t.heat.unused,
@@ -94,13 +104,42 @@ export function heatLegend(
  * Cor de cada nó no modo ativo (a seleção e o esmaecimento continuam nos reducers).
  * `undefined` mantém o visual padrão.
  */
+export type NodePaint = (n: VNode) => { color?: string; borderColor?: string } | undefined;
+
+/**
+ * Comparação: arquivo novo na cor `added`; arquivo com dependência nova ou removida em `changed`;
+ * grupo com algo novo ou alterado abaixo dele ganha a borda `changed`; pacote externo novo em `added`.
+ */
+export function changesPainter(diff: GraphDiff, colors: Pick<HeatColors, 'added' | 'changed'>): NodePaint {
+  const added = new Set(diff.filesAdded);
+  const externals = new Set(diff.externalsAdded);
+  const changed = new Set<string>();
+  for (const e of [...diff.edgesAdded, ...diff.edgesRemoved]) {
+    changed.add(e.from);
+    if (!e.external) changed.add(e.to);
+  }
+  const touched = [...added, ...changed];
+  return (n) => {
+    if (n.kind === 'external') return externals.has(n.path) ? { color: colors.added } : undefined;
+    if (n.kind === 'file') {
+      if (added.has(n.path)) return { color: colors.added };
+      return changed.has(n.path) ? { color: colors.changed } : undefined;
+    }
+    if (!n.path) return undefined;
+    const prefix = `${n.path}/`;
+    return touched.some((p) => p.startsWith(prefix)) ? { borderColor: colors.changed } : undefined;
+  };
+}
+
 export function heatPainter(
   colorBy: ColorBy,
   nodes: VNode[],
   testOnly: ReadonlySet<string>,
   colors: HeatColors,
-): ((n: VNode) => { color?: string; borderColor?: string } | undefined) | undefined {
+  diff?: GraphDiff | null,
+): NodePaint | undefined {
   if (colorBy === 'none') return undefined;
+  if (colorBy === 'changes') return diff ? changesPainter(diff, colors) : undefined;
   if (colorBy === 'unused') {
     return (n) => {
       if (n.kind === 'file' && n.metrics.unused > 0) return { color: colors.unused };

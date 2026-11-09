@@ -145,7 +145,7 @@ function Tree() {
               <span className="visually-hidden">{t.explorer.unused}</span>
             </span>
           )}
-          {colorBy !== 'none' && colorBy !== 'unused' && metricOf(node, colorBy) !== null && (
+          {colorBy !== 'none' && colorBy !== 'unused' && colorBy !== 'changes' && metricOf(node, colorBy) !== null && (
             <span className="row__metric num">{t.fmt.int(metricOf(node, colorBy)!)}</span>
           )}
           {node.inCycle && (

@@ -3,6 +3,7 @@ import type { SearchHit } from '@archviewer/core-wasm';
 import { useT } from '../i18n/store';
 import { useGraphStore, type Filters } from '../store/graph-store';
 import { ColorBySelect } from './ColorBySelect';
+import { CompareMenu } from './CompareMenu';
 import { ExportMenu } from './ExportMenu';
 import { Icon } from './Icon';
 import { LanguageSelect } from './LanguageSelect';
@@ -149,6 +150,7 @@ export function Toolbar() {
         ))}
       </div>
       <ColorBySelect />
+      <CompareMenu />
       <ExportMenu />
       <LanguageSelect />
       <button type="button" className="key key--primary toolbar__open" onClick={() => void open()}>

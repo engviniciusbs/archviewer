@@ -20,6 +20,7 @@ Open a project folder and ArchViewer draws its folders, files and imports as a g
 - **Monorepo aware**: pnpm and npm/yarn workspaces are detected and shown as packages.
 - **Heatmap**: color the graph by fan-in, fan-out or lines to spot hotspots and over-coupled folders.
 - **Unused code**: finds files no entry point reaches, files only tests use, and exports nobody imports. Entry points come from `package.json`, `index.html`, Next.js routes, config, tests and stories.
+- **Compare versions**: compare the open project with a JSON you exported earlier or with another folder (a second checkout). See added and removed files, new packages, new dependencies, new or resolved cycles and fan-in changes, and color the graph by what changed.
 - **Export and share**: download the current view as PNG or SVG, copy it as a Mermaid diagram, download the full file graph as JSON, or copy a README badge with your project's file and cycle counts.
 - **English and Portuguese**: the interface follows your browser language, and a selector switches it. New languages are one file away ([how to translate](CONTRIBUTING.md#translating-archviewer)).
 - **Private by design**: files are read locally and analyzed on your machine. No file, path or metric is sent anywhere.
@@ -75,9 +76,7 @@ archviewer/
 
 ## Roadmap
 
-Planned next, roughly in this order:
-
-- **Compare versions**: what changed in the architecture between two branches
+Everything on the first roadmap has shipped. Ideas being considered next: a monorepo package view, more languages, and a native CLI on top of `archviewer-core` for CI checks.
 
 Follow progress in the [roadmap issue](https://github.com/engviniciusbs/archviewer/issues/8). Ideas are welcome.
 

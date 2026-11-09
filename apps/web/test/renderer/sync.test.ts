@@ -21,6 +21,8 @@ const theme: GraphTheme = {
   heat: ['h1', 'h2', 'h3', 'h4', 'h5'],
   unused: 'u',
   testOnly: 't',
+  added: 'rgb(27, 175, 122)',
+  changed: 'rgb(98, 80, 214)',
 };
 
 const node = (id: number, kind: VNode['kind'], extra: Partial<VNode> = {}): VNode => ({

@@ -53,6 +53,7 @@ export function GraphCanvas() {
   const filters = useGraphStore((s) => s.filters);
   const colorBy = useGraphStore((s) => s.colorBy);
   const deadCode = useGraphStore((s) => s.deadCode);
+  const diff = useGraphStore((s) => s.comparison?.diff ?? null);
   const selected = useGraphStore((s) => s.selected);
   const focusRequest = useGraphStore((s) => s.focusRequest);
 
@@ -137,7 +138,7 @@ export function GraphCanvas() {
         const first = e.graph.order === 0;
         const existing = new Set(e.graph.nodes());
         const r = renderable(vgraph, filters);
-        const paint = heatPainter(colorBy, r.nodes, new Set(deadCode?.testOnlyFiles ?? []), e.theme);
+        const paint = heatPainter(colorBy, r.nodes, new Set(deadCode?.testOnlyFiles ?? []), e.theme, diff);
         const { added } = syncGraph(e.graph, r, e.cache, e.theme, paint);
         return {
           added: added.length,
@@ -152,7 +153,7 @@ export function GraphCanvas() {
       },
     });
     e.sigma.refresh();
-  }, [vgraph, filters, colorBy, deadCode, storeApi]);
+  }, [vgraph, filters, colorBy, deadCode, diff, storeApi]);
 
   useEffect(() => {
     selectedRef.current = selected;

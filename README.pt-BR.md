@@ -20,6 +20,7 @@ Abra a pasta de um projeto e o ArchViewer desenha as pastas, os arquivos e os im
 - **Entende monorepos**: workspaces do pnpm e do npm/yarn são detectados e aparecem como pacotes.
 - **Heatmap**: colore o grafo por fan-in, fan-out ou linhas para achar pontos críticos e pastas acopladas demais.
 - **Código sem uso**: acha arquivos que nenhuma entrada alcança, arquivos que só os testes usam e exports que ninguém importa. As entradas vêm do `package.json`, do `index.html`, de rotas do Next.js, de config, de testes e de stories.
+- **Comparar versões**: compare o projeto aberto com um JSON exportado antes ou com outra pasta (um segundo checkout). Veja arquivos novos e removidos, pacotes novos, dependências novas, ciclos novos ou resolvidos e variações de fan-in, e pinte o grafo pelo que mudou.
 - **Exportar e compartilhar**: baixe a visão atual em PNG ou SVG, copie como diagrama Mermaid, baixe o grafo completo de arquivos em JSON ou copie um badge para o README com as contagens de arquivos e ciclos.
 - **Inglês e português**: a interface segue o idioma do navegador, e um seletor troca o idioma. Um idioma novo é um arquivo a mais ([como traduzir](CONTRIBUTING.md#translating-archviewer), em inglês).
 - **Privado por construção**: os arquivos são lidos localmente e analisados na sua máquina. Nenhum arquivo, caminho ou métrica é enviado a lugar algum.
@@ -77,9 +78,7 @@ O deploy de produção está descrito em [docs/deploy.md](docs/deploy.md).
 
 ## Roadmap
 
-Os próximos passos, mais ou menos nesta ordem:
-
-- **Comparar versões**: o que mudou na arquitetura entre duas branches
+Tudo do primeiro roadmap já foi entregue. Ideias em avaliação: visão por pacote em monorepos, mais linguagens e uma CLI nativa sobre o `archviewer-core` para checagens no CI.
 
 Acompanhe na [issue de roadmap](https://github.com/engviniciusbs/archviewer/issues/8). Ideias são bem-vindas.
 

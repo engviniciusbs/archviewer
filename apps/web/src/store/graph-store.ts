@@ -6,6 +6,9 @@ import { createAnalysisClient, type AnalysisApi } from '../analysis/client';
 import { scan } from '../ingest/scan';
 import { readInto, type IngestSkip, type ReadProgress } from '../ingest/read';
 import type { DirSource } from '../ingest/source';
+import { analyzeToExport } from '../compare/baseline';
+import { diffGraphs, type GraphDiff } from '../compare/diff';
+import { parseExport } from '../compare/parse';
 import type { ColorBy } from '../renderer/heat';
 import { readColorBy, readFilters, writeFilters } from './url';
 
@@ -38,6 +41,9 @@ export interface GraphState {
   /** Id cujo detalhe não pôde ser carregado (resposta nula ou falha); null = sem falha. */
   detailError: number | null;
   filters: Filters;
+  /** Comparação ativa com outra versão; null sem comparação. */
+  comparison: Comparison | null;
+  comparePhase: ComparePhase;
   /** Métrica do heatmap; 'none' mantém as cores padrão. Vai para a URL como `color=`. */
   colorBy: ColorBy;
   focusRequest: { id: number; seq: number } | null;
@@ -51,6 +57,11 @@ export interface GraphState {
   reveal(hit: SearchHit): Promise<void>;
   setFilter<K extends keyof Filters>(k: K, v: boolean): void;
   setColorBy(c: ColorBy): void;
+  /** Compara o projeto aberto com um JSON exportado; false quando o arquivo não é um export válido. */
+  compareWithExport(text: string, label: string): Promise<boolean>;
+  /** Analisa outra pasta num cliente temporário e compara com o projeto aberto. */
+  compareWithFolder(source: DirSource): Promise<void>;
+  clearComparison(): void;
   /** Busca no cliente atual; [] sem projeto pronto, com busca vazia ou em falha. */
   search(query: string): Promise<SearchHit[]>;
   setSearchResults(r: SearchResults | null): void;
@@ -60,6 +71,17 @@ export interface GraphState {
 }
 
 export type SearchResults = { query: string; hits: SearchHit[] };
+export type Comparison = {
+  label: string;
+  diff: GraphDiff;
+  warning: 'projectMismatch' | null;
+  /** Nome do projeto da versão "antes". */
+  baseProject: string;
+};
+export type ComparePhase =
+  | { status: 'idle' }
+  | { status: 'loading'; read: number; total: number }
+  | { status: 'error'; message: string };
 
 const LARGE_PROJECT = 10_000;
 const MAX_FILE_BYTES = 2_097_152;
@@ -107,6 +129,9 @@ type DataState = Omit<
   | 'reveal'
   | 'setFilter'
   | 'setColorBy'
+  | 'compareWithExport'
+  | 'compareWithFolder'
+  | 'clearComparison'
   | 'search'
   | 'setSearchResults'
   | 'exportGraph'
@@ -135,6 +160,8 @@ const initialData = (): DataState => ({
   detailError: null,
   focusRequest: null,
   searchResults: null,
+  comparison: null,
+  comparePhase: { status: 'idle' },
 });
 
 export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => number }): StoreApi<GraphState> {
@@ -143,6 +170,7 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
   let client: AnalysisApi | null = null;
   let unsubCrash: (() => void) | null = null;
   let abort: AbortController | null = null;
+  let compareAbort: AbortController | null = null;
   let confirmResolve: ((proceed: boolean) => void) | null = null;
   let generation = 0;
   let viewSeq = 0;
@@ -158,6 +186,8 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
     collapsedPending = [];
     abort?.abort();
     abort = null;
+    compareAbort?.abort();
+    compareAbort = null;
     unsubCrash?.();
     unsubCrash = null;
     const pendingConfirm = confirmResolve;
@@ -231,6 +261,7 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
         const t0 = now();
         set({
           ...initialData(),
+          colorBy: get().colorBy === 'changes' ? 'none' : get().colorBy,
           phase: 'scanning',
           projectName: source.name || 'projeto',
           fallback,
@@ -344,7 +375,86 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
       },
 
       setColorBy(colorBy) {
+        if (colorBy === 'changes' && !get().comparison) return;
         set({ colorBy });
+        writeUrl(get().filters, colorBy);
+      },
+
+      async compareWithExport(text, label) {
+        const c = client;
+        if (!c || get().phase !== 'ready') return false;
+        const parsed = parseExport(text);
+        if (!parsed.ok) {
+          set({ comparePhase: { status: 'error', message: 'invalid' } });
+          return false;
+        }
+        const gen = generation;
+        try {
+          const after = await c.exportGraph();
+          if (gen !== generation) return false;
+          if (!after) throw new Error('no analysis to compare');
+          set({
+            comparison: {
+              label,
+              diff: diffGraphs(parsed.graph, after),
+              warning: parsed.graph.project === after.project ? null : 'projectMismatch',
+              baseProject: parsed.graph.project,
+            },
+            comparePhase: { status: 'idle' },
+          });
+          return true;
+        } catch (e) {
+          if (gen === generation) set({ comparePhase: { status: 'error', message: message(e) } });
+          return false;
+        }
+      },
+
+      async compareWithFolder(source) {
+        const c = client;
+        if (!c || get().phase !== 'ready') return;
+        const gen = generation;
+        compareAbort?.abort();
+        const ac = new AbortController();
+        compareAbort = ac;
+        const base = deps.api();
+        set({ comparePhase: { status: 'loading', read: 0, total: 0 } });
+        try {
+          const before = await analyzeToExport(source, base, {
+            maxFileBytes: MAX_FILE_BYTES,
+            batchFiles: BATCH_FILES,
+            batchBytes: BATCH_BYTES,
+            signal: ac.signal,
+            onProgress: (p) => {
+              if (gen === generation && compareAbort === ac) set({ comparePhase: { status: 'loading', ...p } });
+            },
+          });
+          if (gen !== generation || compareAbort !== ac) return;
+          const after = await c.exportGraph();
+          if (gen !== generation || compareAbort !== ac) return;
+          if (!after) throw new Error('no analysis to compare');
+          set({
+            comparison: {
+              label: source.name || 'folder',
+              diff: diffGraphs(before, after),
+              warning: null,
+              baseProject: before.project,
+            },
+            comparePhase: { status: 'idle' },
+          });
+        } catch (e) {
+          if (gen !== generation || compareAbort !== ac) return;
+          set({ comparePhase: isAbort(e) ? { status: 'idle' } : { status: 'error', message: message(e) } });
+        } finally {
+          base.dispose();
+          if (compareAbort === ac) compareAbort = null;
+        }
+      },
+
+      clearComparison() {
+        compareAbort?.abort();
+        compareAbort = null;
+        const colorBy = get().colorBy === 'changes' ? 'none' : get().colorBy;
+        set({ comparison: null, comparePhase: { status: 'idle' }, colorBy });
         writeUrl(get().filters, colorBy);
       },
 
