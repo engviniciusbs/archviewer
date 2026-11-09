@@ -71,7 +71,13 @@ export interface GraphState {
 }
 
 export type SearchResults = { query: string; hits: SearchHit[] };
-export type Comparison = { label: string; diff: GraphDiff; warning: 'projectMismatch' | null };
+export type Comparison = {
+  label: string;
+  diff: GraphDiff;
+  warning: 'projectMismatch' | null;
+  /** Nome do projeto da versão "antes". */
+  baseProject: string;
+};
 export type ComparePhase =
   | { status: 'idle' }
   | { status: 'loading'; read: number; total: number }
@@ -392,6 +398,7 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
               label,
               diff: diffGraphs(parsed.graph, after),
               warning: parsed.graph.project === after.project ? null : 'projectMismatch',
+              baseProject: parsed.graph.project,
             },
             comparePhase: { status: 'idle' },
           });
@@ -426,7 +433,12 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
           if (gen !== generation || compareAbort !== ac) return;
           if (!after) throw new Error('no analysis to compare');
           set({
-            comparison: { label: source.name || 'folder', diff: diffGraphs(before, after), warning: null },
+            comparison: {
+              label: source.name || 'folder',
+              diff: diffGraphs(before, after),
+              warning: null,
+              baseProject: before.project,
+            },
             comparePhase: { status: 'idle' },
           });
         } catch (e) {

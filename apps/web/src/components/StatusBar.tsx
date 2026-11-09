@@ -5,6 +5,7 @@ import { useT } from '../i18n/store';
 import { useGraphStore } from '../store/graph-store';
 import { visibleUnresolved } from '../store/selectors';
 import { Icon } from './Icon';
+import { ComparePanel } from './ComparePanel';
 import { DeadCodePanel } from './DeadCodePanel';
 import { IssuesPanel, SkippedPanel } from './IssuesPanel';
 
@@ -42,7 +43,7 @@ const UNRESOLVED_INDEX = 4;
 const IGNORED_INDEX = 5;
 const UNUSED_INDEX = 6;
 
-type Disclosure = 'unresolved' | 'ignored' | 'unused';
+type Disclosure = 'unresolved' | 'ignored' | 'unused' | 'changes';
 
 export function StatusBar() {
   const t = useT();
@@ -52,11 +53,13 @@ export function StatusBar() {
   const ingestSkipped = useGraphStore((s) => s.ingestSkipped);
   const elapsedMs = useGraphStore((s) => s.elapsedMs);
   const deadCode = useGraphStore((s) => s.deadCode);
+  const comparison = useGraphStore((s) => s.comparison);
   const fallback = useGraphStore((s) => s.fallback);
   const [open, setOpen] = useState<Disclosure | null>(null);
   const unresolvedId = useId();
   const ignoredId = useId();
   const unusedId = useId();
+  const changesId = useId();
 
   if (!summary) return null;
   const unresolved = issues ? visibleUnresolved(issues, filters) : [];
@@ -87,6 +90,9 @@ export function StatusBar() {
         <IssuesPanel id={unresolvedId} unresolved={unresolved} onClose={() => setOpen(null)} />
       )}
       {open === 'ignored' && <SkippedPanel id={ignoredId} skipped={skipped} onClose={() => setOpen(null)} />}
+      {open === 'changes' && comparison && (
+        <ComparePanel id={changesId} diff={comparison.diff} onClose={() => setOpen(null)} />
+      )}
       {open === 'unused' && deadCode && (
         <DeadCodePanel id={unusedId} dead={deadCode} onClose={() => setOpen(null)} />
       )}
@@ -115,6 +121,19 @@ export function StatusBar() {
                 )}
               </li>
             ))}
+            {comparison && (
+              <li className="num">
+                <button
+                  type="button"
+                  className="linkish statusbar__changes"
+                  aria-expanded={open === 'changes'}
+                  aria-controls={changesId}
+                  onClick={() => setOpen((o) => (o === 'changes' ? null : 'changes'))}
+                >
+                  {t.compare.changes(comparison.diff.changeCount)}
+                </button>
+              </li>
+            )}
           </ul>
         </div>
         {fallback && (
