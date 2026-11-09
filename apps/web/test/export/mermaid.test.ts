@@ -12,6 +12,7 @@ const node = (id: number, o: Partial<VNode> = {}): VNode => ({
   inCycle: false,
   expandable: false,
   expanded: false,
+  metrics: { fanIn: 0, fanOut: 0, loc: 0, unused: 0 },
   ...o,
 });
 const edge = (from: number, to: number, o: Partial<VEdge> = {}): VEdge => ({

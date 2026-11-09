@@ -13,6 +13,9 @@
   --color-rule: oklch(90% 0.009 252); --color-rule-2: oklch(83% 0.012 252);
   --color-graphite: oklch(21% 0.024 262); --color-graphite-2: oklch(26.5% 0.026 262); --color-graphite-ink: oklch(93% 0.010 250); --color-graphite-muted: oklch(69% 0.022 256);
   --color-accent: oklch(52% 0.19 258); --color-accent-2: oklch(76% 0.13 254); --color-accent-wash: oklch(95% 0.028 256); --color-accent-ink: oklch(98.6% 0.005 250); --color-focus: oklch(52% 0.19 258);
+  /* Heatmap: rampa ordinal de um matiz (laranja; o azul é da seleção), validada contra --color-paper. */
+  --color-heat-1: oklch(76% 0.13 45); --color-heat-2: oklch(69% 0.15 45); --color-heat-3: oklch(60% 0.16 45); --color-heat-4: oklch(51% 0.15 45); --color-heat-5: oklch(42% 0.13 45);
+  --color-unused: oklch(64% 0.14 70); --color-test-only: oklch(75% 0.13 75);
   --color-accent-deep: oklch(43% 0.2 262); --color-accent-edge: oklch(39% 0.16 260);
   --color-glyph-1: oklch(89% 0.025 254); --color-glyph-2: oklch(81% 0.045 255); --color-glyph-3: oklch(70% 0.085 256); --color-glyph-4: oklch(60% 0.13 257);
   --color-graphite-glyph-1: oklch(33% 0.03 262); --color-graphite-glyph-2: oklch(41% 0.05 260); --color-graphite-glyph-3: oklch(53% 0.1 258);

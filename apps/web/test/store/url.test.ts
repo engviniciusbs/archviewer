@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFilters, writeFilters } from '../../src/store/url';
+import { readColorBy, readFilters, writeFilters } from '../../src/store/url';
 import type { Filters } from '../../src/store/graph-store';
 
 const none: Filters = { hideExternals: false, hideTypeOnly: false, hideAssets: false, cyclesOnly: false };
@@ -20,6 +20,15 @@ describe('url', () => {
     expect(readFilters('')).toEqual(none);
     expect(readFilters('?cycles=0')).toEqual(none);
   });
+  it('color= guarda o heatmap e ignora valores desconhecidos', () => {
+    expect(writeFilters(none, 'loc')).toBe('?color=loc');
+    expect(writeFilters({ ...none, cyclesOnly: true }, 'unused')).toBe('?cycles=1&color=unused');
+    expect(writeFilters(none, 'none')).toBe('');
+    expect(readColorBy('?color=fanOut')).toBe('fanOut');
+    expect(readColorBy('?color=xyz')).toBe('none');
+    expect(readColorBy('')).toBe('none');
+  });
+
   it('ida e volta', () => {
     for (let m = 0; m < 16; m++) {
       const f: Filters = {

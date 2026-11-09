@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { vi } from 'vitest';
 import type {
   AddResult,
+  DeadCode,
   Detail,
   FileInput,
   GraphExport,
@@ -27,6 +28,7 @@ export const vnode = (id: number, o: Partial<VNode> = {}): VNode => ({
   inCycle: false,
   expandable: false,
   expanded: false,
+  metrics: { fanIn: 0, fanOut: 0, loc: 0, unused: 0 },
   ...o,
 });
 
@@ -44,6 +46,15 @@ export function sampleGraph(): VisibleGraph {
     edges: [],
   };
 }
+
+export const deadCode = (o: Partial<DeadCode> = {}): DeadCode => ({
+  entries: [{ path: 'src/main.ts', reason: 'html' }],
+  unusedFiles: ['src/old.ts', 'src/legacy/x.ts'],
+  testOnlyFiles: ['src/fixtures.ts'],
+  unusedExports: [{ path: 'src/a.ts', names: ['helper', 'default'] }],
+  fallback: false,
+  ...o,
+});
 
 export const summary = (o: Partial<Summary> = {}): Summary => ({
   files: 8,
@@ -77,6 +88,7 @@ export function makeApi(o: { hits?: SearchHit[]; finish?: Partial<FinishResult>;
         summary: summary(),
         issues: issues(),
         defaultExpansion: [0, 1],
+        deadCode: deadCode(),
         ...o.finish,
       }),
     ),

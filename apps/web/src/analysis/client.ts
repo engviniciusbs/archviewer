@@ -1,5 +1,6 @@
 import type {
   AddResult,
+  DeadCode,
   Detail,
   FileInput,
   GraphExport,
@@ -14,6 +15,7 @@ export interface FinishResult {
   summary: Summary;
   issues: Issues;
   defaultExpansion: number[];
+  deadCode: DeadCode;
 }
 
 export interface AnalysisApi {

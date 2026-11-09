@@ -59,6 +59,14 @@ describe('createHandler', () => {
     expect(h('detail', [999_999])).toBeNull();
   });
 
+  it('finish devolve também o código morto', () => {
+    const h = createHandler(core);
+    h('start', ['sample']);
+    h('addFiles', [loadSample()]);
+    const r = h('finish', []) as { deadCode: { fallback: boolean } };
+    expect(r.deadCode.fallback).toBe(true);
+  });
+
   it('exportGraph devolve null antes de finish e o grafo completo depois', () => {
     const h = createHandler(core);
     h('start', ['sample']);

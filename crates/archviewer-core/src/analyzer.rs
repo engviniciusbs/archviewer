@@ -3,9 +3,10 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 
+use crate::dead::DeadData;
 use crate::graph::Graph;
 use crate::model::{
-    AddResult, AnalyzerConfig, FileInput, FileParseErrors, Issues, NodeKind, SkipReason,
+    AddResult, AnalyzerConfig, DeadCode, FileInput, FileParseErrors, Issues, NodeKind, SkipReason,
     SkippedFile, Summary, Warning,
 };
 use crate::parse::{parse_source, ParsedFile};
@@ -34,6 +35,7 @@ pub struct Analyzer {
     configs: HashMap<String, String>,
     skipped: Vec<SkippedFile>,
     graph: Option<Graph>,
+    dead: Option<DeadData>,
     summary: Option<Summary>,
     warnings: Vec<Warning>,
 }
@@ -48,6 +50,7 @@ impl Analyzer {
             graph: None,
             summary: None,
             warnings: Vec::new(),
+            dead: None,
         }
     }
 
@@ -123,6 +126,7 @@ impl Analyzer {
             warnings: warnings.clone(),
         };
         self.warnings = warnings;
+        self.dead = Some(crate::dead::analyze(&graph, &self.configs, &resolver));
         self.graph = Some(graph);
         self.summary = Some(summary.clone());
         Ok(summary)
@@ -165,6 +169,15 @@ impl Analyzer {
 
     pub(crate) fn graph(&self) -> Option<&Graph> {
         self.graph.as_ref()
+    }
+
+    pub(crate) fn dead(&self) -> Option<&DeadData> {
+        self.dead.as_ref()
+    }
+
+    /// Entry points, unreachable files and unused exports; `None` until `finish` has run.
+    pub fn dead_code(&self) -> Option<DeadCode> {
+        self.dead.as_ref().map(|d| d.public.clone())
     }
 
     pub(crate) fn project_name(&self) -> &str {

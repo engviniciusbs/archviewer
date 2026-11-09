@@ -5,8 +5,8 @@ use std::collections::{BTreeMap, HashSet};
 use crate::analyzer::Analyzer;
 use crate::graph::Graph;
 use crate::model::{
-    DepRef, Detail, ExternalDetail, FileDetail, GroupDetail, GroupKind, NodeId, NodeKind,
-    SearchHit, WeightedRef,
+    DepRef, Detail, ExternalDetail, FileDetail, FileUsage, GroupDetail, GroupKind, NodeId,
+    NodeKind, SearchHit, WeightedRef,
 };
 
 const TOP_LIMIT: usize = 10;
@@ -135,6 +135,14 @@ impl Analyzer {
                     paths.sort();
                     paths
                 });
+                let (usage, entry_reason) = self
+                    .dead()
+                    .and_then(|d| d.usage[id as usize])
+                    .unwrap_or((FileUsage::Used, None));
+                let unused_exports = self
+                    .dead()
+                    .and_then(|d| d.unused_exports.get(&id).cloned())
+                    .unwrap_or_default();
                 Detail::File(FileDetail {
                     id,
                     path: n.path.clone(),
@@ -153,6 +161,9 @@ impl Analyzer {
                     fan_in: fan_in.len() as u32,
                     fan_out: fan_out.len() as u32,
                     parse_errors: data.errors.clone(),
+                    usage,
+                    entry_reason,
+                    unused_exports,
                 })
             }
             NodeKind::Group => Detail::Group(group_detail(g, id)),

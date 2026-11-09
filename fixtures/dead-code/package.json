@@ -1,0 +1,11 @@
+{
+  "name": "dc",
+  "main": "src/index.ts",
+  "bin": { "dc": "bin/cli.ts" },
+  "exports": {
+    ".": { "import": "./src/index.ts" },
+    "./util": "./src/util/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": { "gen": "tsx scripts/gen.ts --out dist" }
+}

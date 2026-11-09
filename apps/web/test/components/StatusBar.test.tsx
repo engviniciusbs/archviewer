@@ -14,14 +14,14 @@ beforeEach(() => {
 describe('statusItems', () => {
   it('formata com plural em inglês', () => {
     expect(
-      statusItems({ ...summary(), unresolvedShown: 1, ignored: 0, elapsedMs: 412 }, messagesFor('en')),
-    ).toEqual(['8 files', '12 edges', '1 cycle', '2 externals', '1 unresolved', '0 ignored', '0.4 s']);
+      statusItems({ ...summary(), unresolvedShown: 1, ignored: 0, unused: 2, elapsedMs: 412 }, messagesFor('en')),
+    ).toEqual(['8 files', '12 edges', '1 cycle', '2 externals', '1 unresolved', '0 ignored', '2 unused', '0.4 s']);
   });
 
   it('formata com plural e pt-BR', () => {
     expect(
-      statusItems({ ...summary(), unresolvedShown: 1, ignored: 0, elapsedMs: 412 }, messagesFor('pt-BR')),
-    ).toEqual(['8 arquivos', '12 arestas', '1 ciclo', '2 externos', '1 não resolvido', '0 ignorados', '0,4 s']);
+      statusItems({ ...summary(), unresolvedShown: 1, ignored: 0, unused: 1, elapsedMs: 412 }, messagesFor('pt-BR')),
+    ).toEqual(['8 arquivos', '12 arestas', '1 ciclo', '2 externos', '1 não resolvido', '0 ignorados', '1 sem uso', '0,4 s']);
   });
 
   it('usa o singular e separa milhares', () => {
@@ -30,9 +30,10 @@ describe('statusItems', () => {
         ...summary({ files: 1, edges: 1, cycles: 0, externals: 1 }),
         unresolvedShown: 2345,
         ignored: 1,
+        unused: 0,
         elapsedMs: 12_340,
       }, messagesFor('pt-BR')),
-    ).toEqual(['1 arquivo', '1 aresta', '0 ciclos', '1 externo', '2.345 não resolvidos', '1 ignorado', '12,3 s']);
+    ).toEqual(['1 arquivo', '1 aresta', '0 ciclos', '1 externo', '2.345 não resolvidos', '1 ignorado', '0 sem uso', '12,3 s']);
   });
 });
 
@@ -49,7 +50,7 @@ describe('StatusBar em ready', () => {
     renderWith(store, <StatusBar />);
     const bar = screen.getByRole('status');
     const items = within(bar).getAllByRole('listitem').map((li) => li.textContent);
-    expect(items).toEqual(['8 files', '12 edges', '1 cycle', '2 externals', '1 unresolved', '3 ignored', '0.4 s']);
+    expect(items).toEqual(['8 files', '12 edges', '1 cycle', '2 externals', '1 unresolved', '3 ignored', '2 unused', '0.4 s']);
   });
 
   it('"não resolvidos" abre a lista com from, specifier e motivo traduzido', async () => {

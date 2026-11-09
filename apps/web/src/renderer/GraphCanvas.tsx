@@ -5,6 +5,7 @@ import { NodeBorderProgram } from '@sigma/node-border';
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 import { registerSceneSource, sceneFromSigma } from '../export/scene';
+import { heatPainter } from './heat';
 import { useGraphStore, useGraphStoreApi } from '../store/graph-store';
 import { renderable } from '../store/selectors';
 import { stopLayout, syncThenLayout } from './layout';
@@ -50,6 +51,8 @@ export function GraphCanvas() {
   const storeApi = useGraphStoreApi();
   const vgraph = useGraphStore((s) => s.graph);
   const filters = useGraphStore((s) => s.filters);
+  const colorBy = useGraphStore((s) => s.colorBy);
+  const deadCode = useGraphStore((s) => s.deadCode);
   const selected = useGraphStore((s) => s.selected);
   const focusRequest = useGraphStore((s) => s.focusRequest);
 
@@ -133,7 +136,9 @@ export function GraphCanvas() {
       mutate: () => {
         const first = e.graph.order === 0;
         const existing = new Set(e.graph.nodes());
-        const { added } = syncGraph(e.graph, renderable(vgraph, filters), e.cache, e.theme);
+        const r = renderable(vgraph, filters);
+        const paint = heatPainter(colorBy, r.nodes, new Set(deadCode?.testOnlyFiles ?? []), e.theme);
+        const { added } = syncGraph(e.graph, r, e.cache, e.theme, paint);
         return {
           added: added.length,
           durationMs: first ? INITIAL_LAYOUT_MS : INCREMENTAL_LAYOUT_MS,
@@ -147,7 +152,7 @@ export function GraphCanvas() {
       },
     });
     e.sigma.refresh();
-  }, [vgraph, filters, storeApi]);
+  }, [vgraph, filters, colorBy, deadCode, storeApi]);
 
   useEffect(() => {
     selectedRef.current = selected;

@@ -105,6 +105,20 @@ test('abre o sample-project e navega pela arquitetura', async ({ page, context }
   await expect(page.getByText('Copied to the clipboard')).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^flowchart LR/);
 
+  // Heatmap por linhas: a legenda aparece e some ao voltar para "nenhum".
+  const colorBy = page.getByRole('combobox', { name: 'Color by' });
+  await colorBy.selectOption('loc');
+  await expect(page.getByRole('group', { name: 'Lines' })).toBeVisible();
+  await colorBy.selectOption('none');
+  await expect(page.getByRole('group', { name: 'Lines' })).toHaveCount(0);
+
+  // Código sem uso: o sample-project não tem entradas de produção, então cai no fallback.
+  await page.getByRole('button', { name: /unused/ }).click();
+  const unusedPanel = page.getByRole('region', { name: 'Unused code' });
+  await expect(unusedPanel.getByRole('table', { name: 'Unused files' })).toContainText('src/index.ts');
+  await expect(unusedPanel.getByText(/nobody imports it/)).toBeVisible();
+  await unusedPanel.getByRole('button', { name: 'Close' }).click();
+
   // Troca para português: a interface e os números mudam sem reabrir o projeto.
   await page.getByRole('combobox', { name: 'Language' }).selectOption({ label: 'Português' });
   await expect(status).toContainText('8 arquivos');

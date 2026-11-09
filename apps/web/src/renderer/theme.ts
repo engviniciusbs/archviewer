@@ -10,6 +10,10 @@ export interface GraphTheme {
   accentWash: string;
   error: string;
   labelFont: string;
+  /** Rampa do heatmap, do claro ao escuro. */
+  heat: string[];
+  unused: string;
+  testOnly: string;
 }
 
 /** Lê os tokens do documento; o Sigma não entende oklch, então toda cor passa por `toRgb`. */
@@ -29,6 +33,9 @@ export function readTheme(root: Element, toRgb: (css: string) => string): GraphT
     accentWash: color('--color-accent-wash'),
     error: color('--color-error'),
     labelFont: raw('--font-body'),
+    heat: [1, 2, 3, 4, 5].map((i) => color(`--color-heat-${i}`)),
+    unused: color('--color-unused'),
+    testOnly: color('--color-test-only'),
   };
 }
 

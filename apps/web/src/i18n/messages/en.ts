@@ -1,4 +1,4 @@
-import type { SkipReason, UnresolvedReason, WarningCode } from '@archviewer/core-wasm';
+import type { EntryReason, SkipReason, UnresolvedReason, WarningCode } from '@archviewer/core-wasm';
 import { formatInt, formatSeconds, plural } from '../format';
 
 const L = 'en';
@@ -27,6 +27,7 @@ export const en = {
     tree: 'Project files',
     empty: 'No files to show.',
     inCycle: 'in a cycle',
+    unused: 'unused',
     noHits: (q: string) => `Nothing found for “${q}”.`,
     noHitsHint: 'Search looks at the names and paths of files and folders.',
     clear: 'Clear search',
@@ -84,6 +85,7 @@ export const en = {
     externals: (n: number) => plural(L, n, { one: '# external', other: '# externals' }),
     unresolved: (n: number) => plural(L, n, { other: '# unresolved' }),
     ignored: (n: number) => plural(L, n, { other: '# ignored' }),
+    unused: (n: number) => plural(L, n, { other: '# unused' }),
     complete: 'Analysis complete',
     completeWithIssues: 'Analysis complete, with issues',
     fallback: "Your browser can't access folders directly; using the file picker.",
@@ -135,6 +137,40 @@ export const en = {
     progress: 'Reading progress',
     readProject: 'Read project',
     cancel: 'Cancel',
+  },
+  dead: {
+    title: 'Unused code',
+    files: 'Unused files',
+    testOnly: 'Used only by tests',
+    exports: 'Unused exports',
+    path: 'Path',
+    names: 'Names',
+    none: 'None.',
+    close: 'Close',
+    note: 'Entry points come from package.json (main, exports, bin, scripts), index.html, Next.js routes, config files, tests and stories. Imports built at runtime are not followed.',
+    fallback: 'No production entry point was found, so “unused” here means “nobody imports it”.',
+    report: 'Missed an entry point? Open an issue',
+    unused: 'Unused',
+    entry: (reason: string) => `Entry · ${reason}`,
+    reasons: {
+      packageJson: 'package.json',
+      script: 'package.json script',
+      html: 'index.html',
+      framework: 'Next.js route',
+      config: 'config file',
+      test: 'test',
+      story: 'story',
+      declaration: 'type declaration',
+    } satisfies Record<EntryReason, string>,
+  },
+  heat: {
+    label: 'Color by',
+    none: 'None',
+    fanIn: 'Fan-in',
+    fanOut: 'Fan-out',
+    loc: 'Lines',
+    unused: 'Unused',
+    testOnly: 'Used only by tests',
   },
   export: {
     button: 'Export',

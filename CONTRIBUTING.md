@@ -46,6 +46,7 @@ Rebuild the WASM (`pnpm build:wasm`) whenever you change Rust code.
 | `apps/web/src/renderer` | Sigma.js canvas, layout and graph sync. |
 | `apps/web/src/components` | UI components. |
 | `fixtures/sample-project` | Small project used by Rust snapshot tests and the e2e test. |
+| `fixtures/dead-code` | Entry-point heuristics, reachability and unused exports (`crates/archviewer-core/src/dead.rs`). |
 
 ## Checks
 

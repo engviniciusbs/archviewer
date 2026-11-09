@@ -28,7 +28,13 @@ export function createHandler(core: CoreModule): (method: Method, args: unknown[
         return session().addFiles(args[0] as FileInput[]) satisfies AddResult;
       case 'finish': {
         const a = session();
-        return { summary: a.finish(), issues: a.issues(), defaultExpansion: Array.from(a.defaultExpansion()) };
+        const summary = a.finish();
+        return {
+          summary,
+          issues: a.issues(),
+          defaultExpansion: Array.from(a.defaultExpansion()),
+          deadCode: a.deadCode()!,
+        };
       }
       case 'view':
         return session().view(args[0] as number[]);

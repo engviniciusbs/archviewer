@@ -272,3 +272,147 @@ fn export_monorepo_package() {
         .unwrap();
     assert_eq!(button.package.as_deref(), Some("@acme/ui"));
 }
+
+#[test]
+fn view_metrics() {
+    let s = snapshot("sample-project");
+    let a = &s.a;
+    let by_path =
+        |g: &VisibleGraph, p: &str| g.nodes.iter().find(|n| n.path == p).cloned().unwrap();
+
+    // Arquivo: igual ao detalhe.
+    let file = by_path(&s.full, "src/circular/a.ts");
+    let d = file_detail(&s, "src/circular/a.ts");
+    assert_eq!(
+        (file.metrics.fan_in, file.metrics.fan_out),
+        (d.fan_in, d.fan_out)
+    );
+    assert_eq!(file.metrics.loc, 11);
+
+    // Grupo recolhido: só conta o que cruza a borda (a <-> b fica de fora).
+    let group = by_path(&s.default, "src/circular");
+    assert!(!group.expanded);
+    let inside = ["src/circular/a.ts", "src/circular/b.ts"];
+    let outside_importers: BTreeSet<String> = inside
+        .iter()
+        .flat_map(|p| file_detail(&s, p).imported_by)
+        .map(|r| r.path)
+        .filter(|p| !inside.contains(&p.as_str()))
+        .collect();
+    let outside_imports: BTreeSet<String> = inside
+        .iter()
+        .flat_map(|p| file_detail(&s, p).imports)
+        .map(|r| r.path)
+        .filter(|p| !inside.contains(&p.as_str()))
+        .collect();
+    assert_eq!(group.metrics.fan_in as usize, outside_importers.len());
+    assert_eq!(group.metrics.fan_out as usize, outside_imports.len());
+    assert_eq!(group.metrics.loc, 22);
+
+    // Externo: importadores distintos, sem saída.
+    let react = by_path(&s.default, "react");
+    assert!(react.metrics.fan_in >= 1);
+    assert_eq!((react.metrics.fan_out, react.metrics.loc), (0, 0));
+    let _ = a;
+}
+
+#[test]
+fn dead_code_fixture() {
+    use archviewer_core::model::{EntryReason, FileUsage};
+    let s = snapshot("dead-code");
+    let d = s.a.dead_code().unwrap();
+    let reason = |p: &str| {
+        d.entries
+            .iter()
+            .find(|e| e.path == p)
+            .unwrap_or_else(|| panic!("{p} is not an entry: {:?}", d.entries))
+            .reason
+            .clone()
+    };
+    assert_eq!(reason("src/index.ts"), EntryReason::PackageJson);
+    assert_eq!(reason("src/util/index.ts"), EntryReason::PackageJson);
+    assert_eq!(reason("bin/cli.ts"), EntryReason::PackageJson);
+    assert_eq!(reason("scripts/gen.ts"), EntryReason::Script);
+    assert_eq!(reason("src/web.ts"), EntryReason::Html);
+    assert_eq!(reason("app/dashboard/page.tsx"), EntryReason::Framework);
+    assert_eq!(reason("vite.config.ts"), EntryReason::Config);
+    assert_eq!(reason("src/only-tests.test.ts"), EntryReason::Test);
+    assert_eq!(reason("src/button.stories.tsx"), EntryReason::Story);
+    assert_eq!(reason("types/global.d.ts"), EntryReason::Declaration);
+    let paths: Vec<&str> = d.entries.iter().map(|e| e.path.as_str()).collect();
+    let mut sorted = paths.clone();
+    sorted.sort();
+    assert_eq!(paths, sorted);
+
+    assert_eq!(d.unused_files, vec!["src/dead/a.ts", "src/dead/b.ts"]);
+    assert_eq!(d.test_only_files, vec!["src/only-tests.ts"]);
+    let unused: Vec<(&str, Vec<&str>)> = d
+        .unused_exports
+        .iter()
+        .map(|u| {
+            (
+                u.path.as_str(),
+                u.names.iter().map(String::as_str).collect(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        unused,
+        vec![
+            ("src/lib/helper.ts", vec!["unusedHelper", "default"]),
+            ("src/named.ts", vec!["notReexported"]),
+            ("src/only-tests.ts", vec!["tUnused"]),
+        ]
+    );
+    assert!(!d.fallback);
+
+    let dead_a = file_detail(&s, "src/dead/a.ts");
+    assert_eq!(dead_a.usage, FileUsage::Unused);
+    assert_eq!(dead_a.entry_reason, None);
+    let index = file_detail(&s, "src/index.ts");
+    assert_eq!(index.usage, FileUsage::Entry);
+    assert_eq!(index.entry_reason, Some(EntryReason::PackageJson));
+    let helper = file_detail(&s, "src/lib/helper.ts");
+    assert_eq!(helper.usage, FileUsage::Used);
+    assert_eq!(helper.unused_exports, vec!["unusedHelper", "default"]);
+    assert_eq!(
+        file_detail(&s, "src/only-tests.ts").usage,
+        FileUsage::TestOnly
+    );
+
+    // Agregado na visão: o grupo recolhido src/dead conta os dois arquivos sem uso.
+    let src_id = s.full.nodes.iter().find(|n| n.path == "src").unwrap().id;
+    let only_src = s.a.view(&[0, src_id]);
+    let dead_group = only_src
+        .nodes
+        .iter()
+        .find(|n| n.path == "src/dead")
+        .unwrap();
+    assert_eq!(dead_group.metrics.unused, 2);
+    let file_a = s
+        .full
+        .nodes
+        .iter()
+        .find(|n| n.path == "src/dead/a.ts")
+        .unwrap();
+    assert_eq!(file_a.metrics.unused, 1);
+
+    // O JSON exportado leva o mesmo resultado.
+    assert_eq!(s.a.export_graph().unwrap().dead_code, d);
+}
+
+#[test]
+fn dead_code_falls_back_without_production_entries() {
+    let s = snapshot("sample-project");
+    let d = s.a.dead_code().unwrap();
+    assert!(d.fallback);
+    assert!(d.test_only_files.is_empty());
+    for p in &d.unused_files {
+        assert!(
+            file_detail(&s, p).imported_by.is_empty(),
+            "{p} has importers"
+        );
+    }
+    assert!(d.unused_files.contains(&"src/index.ts".to_string()));
+    assert!(!d.unused_files.contains(&"src/App.tsx".to_string()));
+}

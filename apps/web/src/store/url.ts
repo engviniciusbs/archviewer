@@ -1,3 +1,4 @@
+import { isColorBy, type ColorBy } from '../renderer/heat';
 import type { Filters } from './graph-store';
 
 export function readFilters(search: string): Filters {
@@ -11,8 +12,13 @@ export function readFilters(search: string): Filters {
   };
 }
 
+export function readColorBy(search: string): ColorBy {
+  const v = new URLSearchParams(search).get('color');
+  return isColorBy(v) ? v : 'none';
+}
+
 /** '' quando tudo é padrão; senão uma string iniciada por '?'. */
-export function writeFilters(f: Filters): string {
+export function writeFilters(f: Filters, colorBy: ColorBy = 'none'): string {
   const hide: string[] = [];
   if (f.hideExternals) hide.push('externals');
   if (f.hideTypeOnly) hide.push('typeOnly');
@@ -20,5 +26,6 @@ export function writeFilters(f: Filters): string {
   const parts: string[] = [];
   if (hide.length > 0) parts.push(`hide=${hide.join(',')}`);
   if (f.cyclesOnly) parts.push('cycles=1');
+  if (colorBy !== 'none') parts.push(`color=${colorBy}`);
   return parts.length > 0 ? `?${parts.join('&')}` : '';
 }
