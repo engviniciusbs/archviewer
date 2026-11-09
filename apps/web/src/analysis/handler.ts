@@ -36,6 +36,8 @@ export function createHandler(core: CoreModule): (method: Method, args: unknown[
         return session().detail(args[0] as number) ?? null;
       case 'find':
         return session().find(args[0] as string, args[1] as number);
+      case 'exportGraph':
+        return session().exportGraph() ?? null;
     }
   };
 }

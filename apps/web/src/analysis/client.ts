@@ -2,6 +2,7 @@ import type {
   AddResult,
   Detail,
   FileInput,
+  GraphExport,
   Issues,
   SearchHit,
   Summary,
@@ -24,6 +25,7 @@ export interface AnalysisApi {
   view(expanded: number[]): Promise<VisibleGraph>;
   detail(id: number): Promise<Detail | null>;
   find(query: string, limit: number): Promise<SearchHit[]>;
+  exportGraph(): Promise<GraphExport | null>;
   onCrash(cb: (message: string) => void): () => void;
   dispose(): void;
 }
@@ -113,6 +115,10 @@ export class AnalysisClient implements AnalysisApi {
   }
   find(query: string, limit: number) {
     return this.call<SearchHit[]>('find', query, limit);
+  }
+
+  exportGraph(): Promise<GraphExport | null> {
+    return this.call<GraphExport | null>('exportGraph');
   }
 
   onCrash(cb: (message: string) => void): () => void {

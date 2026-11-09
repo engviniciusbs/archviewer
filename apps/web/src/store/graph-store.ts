@@ -1,7 +1,7 @@
 import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { Detail, Issues, SearchHit, Summary, VisibleGraph } from '@archviewer/core-wasm';
+import type { Detail, GraphExport, Issues, SearchHit, Summary, VisibleGraph } from '@archviewer/core-wasm';
 import { createAnalysisClient, type AnalysisApi } from '../analysis/client';
 import { scan } from '../ingest/scan';
 import { readInto, type IngestSkip, type ReadProgress } from '../ingest/read';
@@ -48,6 +48,8 @@ export interface GraphState {
   /** Busca no cliente atual; [] sem projeto pronto, com busca vazia ou em falha. */
   search(query: string): Promise<SearchHit[]>;
   setSearchResults(r: SearchResults | null): void;
+  /** Grafo completo de arquivos para exportação; null sem projeto pronto. Erros do worker sobem. */
+  exportGraph(): Promise<GraphExport | null>;
   reset(): void;
 }
 
@@ -92,6 +94,7 @@ type DataState = Omit<
   | 'setFilter'
   | 'search'
   | 'setSearchResults'
+  | 'exportGraph'
   | 'reset'
   | 'filters'
 >;
@@ -334,6 +337,12 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
 
       setSearchResults(r) {
         set({ searchResults: r });
+      },
+
+      async exportGraph() {
+        const c = client;
+        if (!c || get().phase !== 'ready') return null;
+        return c.exportGraph();
       },
 
       reset() {

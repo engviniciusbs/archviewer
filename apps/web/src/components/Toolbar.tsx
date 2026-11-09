@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 import type { SearchHit } from '@archviewer/core-wasm';
 import { useT } from '../i18n/store';
 import { useGraphStore, type Filters } from '../store/graph-store';
+import { ExportMenu } from './ExportMenu';
 import { Icon } from './Icon';
 import { LanguageSelect } from './LanguageSelect';
 import { useOpenProject } from './useOpenProject';
@@ -146,7 +147,8 @@ export function Toolbar() {
           </button>
         ))}
       </div>
-      <LanguageSelect className="toolbar__language" />
+      <ExportMenu />
+      <LanguageSelect />
       <button type="button" className="key key--primary toolbar__open" onClick={() => void open()}>
         {t.open.button}
       </button>

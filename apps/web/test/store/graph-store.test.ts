@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AddResult, Detail, FileInput, SearchHit, VNode, VisibleGraph } from '@archviewer/core-wasm';
+import type { AddResult, Detail, FileInput, GraphExport, SearchHit, VNode, VisibleGraph } from '@archviewer/core-wasm';
 import type { AnalysisApi, FinishResult } from '../../src/analysis/client';
 import { memorySource } from '../../src/ingest/source';
 import { createGraphStore, type Phase } from '../../src/store/graph-store';
@@ -60,6 +60,7 @@ function makeApi(defaultExpansion: number[] = [0]) {
     view: vi.fn(async (e: number[]) => graphFor(e)),
     detail: vi.fn(async (id: number): Promise<Detail | null> => ({ kind: 'group', id }) as unknown as Detail),
     find: vi.fn(async () => [] as SearchHit[]),
+    exportGraph: vi.fn(async () => ({ version: 1 }) as unknown as GraphExport),
     onCrash: vi.fn((cb: (m: string) => void) => {
       crashCb = cb;
       return () => {
@@ -429,5 +430,20 @@ describe('search', () => {
     expect(store.getState().searchResults).toEqual({ query: 'n9', hits: [hit] });
     store.getState().reset();
     expect(store.getState().searchResults).toBeNull();
+  });
+});
+
+describe('exportGraph', () => {
+  it('pede o grafo completo ao client quando o projeto está pronto', async () => {
+    const { api, store } = await ready();
+    expect(await store.getState().exportGraph()).toEqual({ version: 1 });
+    expect(api.exportGraph).toHaveBeenCalledTimes(1);
+  });
+
+  it('devolve null sem projeto pronto', async () => {
+    const api = makeApi();
+    const store = createGraphStore({ api: () => asApi(api) });
+    expect(await store.getState().exportGraph()).toBeNull();
+    expect(api.exportGraph).not.toHaveBeenCalled();
   });
 });

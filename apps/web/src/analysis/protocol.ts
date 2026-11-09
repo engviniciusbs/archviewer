@@ -6,7 +6,8 @@ export type Method =
   | 'finish'
   | 'view'
   | 'detail'
-  | 'find';
+  | 'find'
+  | 'exportGraph';
 
 export type Request = { id: number; method: Method; args: unknown[] };
 
