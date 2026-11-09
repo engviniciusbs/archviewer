@@ -54,7 +54,7 @@ pub(crate) struct Graph {
 
 type ResolvedImport = (Resolution, ImportKind, Vec<String>, String);
 
-fn kind_key(k: &ImportKind) -> u8 {
+pub(crate) fn kind_key(k: &ImportKind) -> u8 {
     match k {
         ImportKind::Static => 0,
         ImportKind::Dynamic => 1,

@@ -351,3 +351,53 @@ mod tests {
         round_trip(ext, "external");
     }
 }
+
+/// One code file in the exported graph.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct ExportFile {
+    pub path: String,
+    pub language: Language,
+    pub loc: u32,
+    /// Name of the nearest workspace package above the file.
+    pub package: Option<String>,
+    pub in_cycle: bool,
+    pub exports: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct ExportExternal {
+    pub name: String,
+}
+
+/// `to` is a file path, or a package name when `external` is true.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct ExportEdge {
+    pub from: String,
+    pub to: String,
+    pub kind: ImportKind,
+    pub external: bool,
+    pub specifiers: Vec<String>,
+}
+
+/// The whole file-level graph, keyed by paths and in a deterministic order.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct GraphExport {
+    pub schema: String,
+    pub version: u32,
+    pub project: String,
+    pub summary: Summary,
+    pub files: Vec<ExportFile>,
+    pub externals: Vec<ExportExternal>,
+    pub edges: Vec<ExportEdge>,
+    pub cycles: Vec<Vec<String>>,
+    pub unresolved: Vec<UnresolvedImport>,
+    pub warnings: Vec<Warning>,
+}

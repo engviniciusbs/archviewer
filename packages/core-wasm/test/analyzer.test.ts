@@ -75,6 +75,18 @@ describe('core-wasm boundary', () => {
     a.free();
   });
 
+  it('exportGraph: undefined antes de finish, grafo completo em camelCase depois', () => {
+    const a = new Analyzer({ projectName: 'sample', maxFileBytes: 2_097_152 });
+    a.addFiles(loadFixture('sample-project'));
+    expect(a.exportGraph()).toBeUndefined();
+    a.finish();
+    const e = a.exportGraph()!;
+    expect(e.files).toHaveLength(8);
+    expect(e.files[0]).toHaveProperty('inCycle');
+    expect(e.cycles).toEqual([['src/circular/a.ts', 'src/circular/b.ts']]);
+    a.free();
+  });
+
   it('avisos chegam estruturados como { code, subject }', () => {
     const a = new Analyzer({ projectName: 'broken', maxFileBytes: 2_097_152 });
     a.addFiles([

@@ -167,6 +167,14 @@ impl Analyzer {
         self.graph.as_ref()
     }
 
+    pub(crate) fn project_name(&self) -> &str {
+        &self.config.project_name
+    }
+
+    pub(crate) fn summary(&self) -> Option<&Summary> {
+        self.summary.as_ref()
+    }
+
     #[cfg(test)]
     pub(crate) fn clone_summary(&self) -> Summary {
         self.summary.clone().expect("finish was called")

@@ -207,3 +207,68 @@ fn broken() {
     );
     insta::assert_json_snapshot!("broken", s.value);
 }
+
+fn finished(name: &str) -> Analyzer {
+    let mut a = Analyzer::new(AnalyzerConfig {
+        project_name: name.into(),
+        ..Default::default()
+    });
+    a.add_files(common::load_fixture(name)).unwrap();
+    a.finish().unwrap();
+    a
+}
+
+#[test]
+fn export_sample_project() {
+    let mut early = Analyzer::new(AnalyzerConfig::default());
+    early
+        .add_files(common::load_fixture("sample-project"))
+        .unwrap();
+    assert!(early.export_graph().is_none());
+
+    let a = finished("sample-project");
+    let e = a.export_graph().unwrap();
+    assert_eq!(e.version, 1);
+    assert_eq!(
+        e.schema,
+        "https://archviewer.viniciusbsarmento.com/schema/graph-v1.json"
+    );
+    assert_eq!(e.project, "sample-project");
+    assert_eq!(e.files.len(), 8);
+    let paths: Vec<&str> = e.files.iter().map(|f| f.path.as_str()).collect();
+    let mut sorted = paths.clone();
+    sorted.sort();
+    assert_eq!(paths, sorted);
+    assert_eq!(
+        e.cycles,
+        vec![vec![
+            "src/circular/a.ts".to_string(),
+            "src/circular/b.ts".to_string()
+        ]]
+    );
+    assert!(e.edges.iter().any(|x| x.to == "react" && x.external));
+    assert!(e
+        .edges
+        .iter()
+        .all(|x| x.external != paths.contains(&x.to.as_str())));
+    assert!(e.files.iter().all(|f| f.package.is_none()));
+    assert_eq!(a.export_graph().unwrap(), e);
+    insta::assert_json_snapshot!("export-sample-project", e);
+}
+
+#[test]
+fn export_monorepo_package() {
+    let e = finished("monorepo-pnpm").export_graph().unwrap();
+    let main = e
+        .files
+        .iter()
+        .find(|f| f.path == "apps/web/src/main.tsx")
+        .unwrap();
+    assert_eq!(main.package.as_deref(), Some("web"));
+    let button = e
+        .files
+        .iter()
+        .find(|f| f.path == "packages/ui/src/button.tsx")
+        .unwrap();
+    assert_eq!(button.package.as_deref(), Some("@acme/ui"));
+}

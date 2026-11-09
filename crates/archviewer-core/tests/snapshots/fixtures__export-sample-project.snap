@@ -1,0 +1,241 @@
+---
+source: crates/archviewer-core/tests/fixtures.rs
+expression: e
+---
+{
+  "schema": "https://archviewer.viniciusbsarmento.com/schema/graph-v1.json",
+  "version": 1,
+  "project": "sample-project",
+  "summary": {
+    "files": 8,
+    "edges": 12,
+    "cycles": 1,
+    "externals": 2,
+    "unresolved": 1,
+    "skipped": 0,
+    "parseErrors": 0,
+    "workspacePackages": 0,
+    "warnings": []
+  },
+  "files": [
+    {
+      "path": "src/App.tsx",
+      "language": "tsx",
+      "loc": 15,
+      "package": null,
+      "inCycle": false,
+      "exports": [
+        "App"
+      ]
+    },
+    {
+      "path": "src/circular/a.ts",
+      "language": "ts",
+      "loc": 11,
+      "package": null,
+      "inCycle": true,
+      "exports": [
+        "a",
+        "getA",
+        "circularCall"
+      ]
+    },
+    {
+      "path": "src/circular/b.ts",
+      "language": "ts",
+      "loc": 11,
+      "package": null,
+      "inCycle": true,
+      "exports": [
+        "b",
+        "getB",
+        "circularCall"
+      ]
+    },
+    {
+      "path": "src/components/Button.tsx",
+      "language": "tsx",
+      "loc": 15,
+      "package": null,
+      "inCycle": false,
+      "exports": [
+        "ButtonProps",
+        "Button"
+      ]
+    },
+    {
+      "path": "src/components/Card.tsx",
+      "language": "tsx",
+      "loc": 18,
+      "package": null,
+      "inCycle": false,
+      "exports": [
+        "CardProps",
+        "Card"
+      ]
+    },
+    {
+      "path": "src/dynamic/lazy.ts",
+      "language": "ts",
+      "loc": 9,
+      "package": null,
+      "inCycle": false,
+      "exports": [
+        "loadHeavyModule",
+        "loadComponent"
+      ]
+    },
+    {
+      "path": "src/index.ts",
+      "language": "ts",
+      "loc": 7,
+      "package": null,
+      "inCycle": false,
+      "exports": [
+        "App"
+      ]
+    },
+    {
+      "path": "src/utils/helpers.ts",
+      "language": "ts",
+      "loc": 13,
+      "package": null,
+      "inCycle": false,
+      "exports": [
+        "formatDate",
+        "initApp",
+        "slugify"
+      ]
+    }
+  ],
+  "externals": [
+    {
+      "name": "date-fns"
+    },
+    {
+      "name": "react"
+    }
+  ],
+  "edges": [
+    {
+      "from": "src/App.tsx",
+      "to": "src/components/Button.tsx",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "Button"
+      ]
+    },
+    {
+      "from": "src/App.tsx",
+      "to": "src/components/Card.tsx",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "Card"
+      ]
+    },
+    {
+      "from": "src/App.tsx",
+      "to": "src/utils/helpers.ts",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "formatDate"
+      ]
+    },
+    {
+      "from": "src/circular/a.ts",
+      "to": "src/circular/b.ts",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "b",
+        "getB"
+      ]
+    },
+    {
+      "from": "src/circular/b.ts",
+      "to": "src/circular/a.ts",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "a",
+        "getA"
+      ]
+    },
+    {
+      "from": "src/components/Card.tsx",
+      "to": "react",
+      "kind": "typeOnly",
+      "external": true,
+      "specifiers": [
+        "ReactNode"
+      ]
+    },
+    {
+      "from": "src/components/Card.tsx",
+      "to": "src/components/Button.tsx",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "Button"
+      ]
+    },
+    {
+      "from": "src/dynamic/lazy.ts",
+      "to": "src/components/Button.tsx",
+      "kind": "dynamic",
+      "external": false,
+      "specifiers": []
+    },
+    {
+      "from": "src/dynamic/lazy.ts",
+      "to": "src/utils/helpers.ts",
+      "kind": "dynamic",
+      "external": false,
+      "specifiers": []
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/App.tsx",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "App"
+      ]
+    },
+    {
+      "from": "src/index.ts",
+      "to": "src/utils/helpers.ts",
+      "kind": "static",
+      "external": false,
+      "specifiers": [
+        "initApp"
+      ]
+    },
+    {
+      "from": "src/utils/helpers.ts",
+      "to": "date-fns",
+      "kind": "static",
+      "external": true,
+      "specifiers": [
+        "format"
+      ]
+    }
+  ],
+  "cycles": [
+    [
+      "src/circular/a.ts",
+      "src/circular/b.ts"
+    ]
+  ],
+  "unresolved": [
+    {
+      "from": "src/components/Button.tsx",
+      "specifier": "./Button.module.css",
+      "reason": "asset"
+    }
+  ],
+  "warnings": []
+}

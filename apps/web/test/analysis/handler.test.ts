@@ -59,6 +59,17 @@ describe('createHandler', () => {
     expect(h('detail', [999_999])).toBeNull();
   });
 
+  it('exportGraph devolve null antes de finish e o grafo completo depois', () => {
+    const h = createHandler(core);
+    h('start', ['sample']);
+    h('addFiles', [loadSample()]);
+    expect(h('exportGraph', [])).toBeNull();
+    h('finish', []);
+    const e = h('exportGraph', []) as { version: number; files: unknown[] };
+    expect(e.version).toBe(1);
+    expect(e.files).toHaveLength(8);
+  });
+
   it('método antes de start lança session not started', () => {
     const h = createHandler(core);
     expect(() => h('view', [[0]])).toThrow('session not started');
