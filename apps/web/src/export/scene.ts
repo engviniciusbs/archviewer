@@ -64,6 +64,8 @@ export function registerSceneSource(fn: () => Scene): () => void {
   };
 }
 
+export const hasSceneSource = (): boolean => source !== null;
+
 /** Cena atual, ou null sem canvas (WebGL indisponível ou grafo ainda não montado). */
 export function currentScene(): Scene | null {
   return source ? source() : null;
