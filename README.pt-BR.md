@@ -18,6 +18,7 @@ Abra a pasta de um projeto e o ArchViewer desenha as pastas, os arquivos e os im
 - **Ciclos e pendências**: dependências circulares ficam destacadas, e os imports não resolvidos aparecem listados com o motivo.
 - **Explorador, busca e detalhes**: árvore de arquivos, busca por nome ou caminho e um painel com fan-in, fan-out, imports, dependentes e um trecho do código.
 - **Entende monorepos**: workspaces do pnpm e do npm/yarn são detectados e aparecem como pacotes.
+- **Inglês e português**: a interface segue o idioma do navegador, e um seletor troca o idioma. Um idioma novo é um arquivo a mais ([como traduzir](CONTRIBUTING.md#translating-archviewer), em inglês).
 - **Privado por construção**: os arquivos são lidos localmente e analisados na sua máquina. Nenhum arquivo, caminho ou métrica é enviado a lugar algum.
 
 ## Como funciona
@@ -75,7 +76,6 @@ O deploy de produção está descrito em [docs/deploy.md](docs/deploy.md).
 
 Os próximos passos, mais ou menos nesta ordem:
 
-- **Interface em inglês** (i18n EN/PT, seguindo o idioma do navegador)
 - **Exportar e compartilhar**: PNG/SVG, JSON, Mermaid e badge para README
 - **Métricas e heatmap**: colorir os nós por fan-in, fan-out e tamanho para achar pontos críticos
 - **Código morto**: arquivos que ninguém importa e exports sem uso

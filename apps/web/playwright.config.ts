@@ -11,6 +11,8 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: 'http://localhost:4173',
+    // O app segue o idioma do navegador; o e2e começa em inglês e troca pelo seletor.
+    locale: 'en-US',
     trace: 'retain-on-failure',
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium', channel } }],

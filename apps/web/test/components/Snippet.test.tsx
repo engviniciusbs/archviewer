@@ -57,6 +57,6 @@ describe('Snippet', () => {
       },
     };
     render(<Snippet source={broken} path="src/a.ts" imports={[]} />);
-    expect(await screen.findByText('Não foi possível ler o arquivo')).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't read the file")).toBeInTheDocument();
   });
 });

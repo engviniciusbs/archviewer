@@ -11,7 +11,7 @@ use oxc_resolver::{
 };
 
 use crate::memfs::{from_virtual, to_virtual, MemoryFs};
-use crate::model::UnresolvedReason;
+use crate::model::{UnresolvedReason, Warning, WarningCode};
 use crate::paths::{is_asset_specifier, package_name};
 use crate::workspace::WorkspacePackage;
 
@@ -39,7 +39,7 @@ pub struct ResolverSet {
 #[derive(Default)]
 struct Fallback {
     scopes: HashSet<String>,
-    warnings: Vec<String>,
+    warnings: Vec<Warning>,
 }
 
 fn is_tsconfig_error(e: &ResolveError) -> bool {
@@ -137,7 +137,7 @@ fn analyze_chain(
     configs: &HashMap<String, String>,
     stack: &mut Vec<String>,
     info: &mut Chain,
-    warnings: &mut Vec<String>,
+    warnings: &mut Vec<Warning>,
 ) -> Option<serde_json::Value> {
     let value = parse_jsonc(configs.get(path)?)?;
     let extends: Vec<String> = match value.get("extends") {
@@ -155,7 +155,7 @@ fn analyze_chain(
         }
         let target = join_rel(parent_dir(path), ext);
         let Some(found) = find_config(&target, configs) else {
-            warnings.push(format!("extends não encontrado: {target}"));
+            warnings.push(Warning::new(WarningCode::ExtendsNotFound, target.clone()));
             continue;
         };
         if stack.contains(&found) || stack.len() > MAX_EXTENDS_DEPTH {
@@ -168,7 +168,7 @@ fn analyze_chain(
         if base.is_some() {
             kept.push(ext.clone());
         } else {
-            warnings.push(format!("tsconfig inválido: {found}"));
+            warnings.push(Warning::new(WarningCode::InvalidTsconfig, found.clone()));
         }
     }
     if kept.len() != extends.len() {
@@ -278,7 +278,7 @@ fn project(config: String, chain: Chain, configs: &HashMap<String, String>) -> P
 fn analyze_tsconfig(
     path: &str,
     configs: &HashMap<String, String>,
-    warnings: &mut Vec<String>,
+    warnings: &mut Vec<Warning>,
 ) -> Option<ScopeInfo> {
     let mut chain = Chain::default();
     let value = analyze_chain(
@@ -317,7 +317,10 @@ fn analyze_tsconfig(
         match loaded {
             Some((found, c)) => projects.push((found, c)),
             None => {
-                warnings.push(format!("referência de tsconfig não encontrada: {target}"));
+                warnings.push(Warning::new(
+                    WarningCode::TsconfigReferenceNotFound,
+                    target.clone(),
+                ));
                 all_loaded = false;
             }
         }
@@ -358,7 +361,7 @@ impl ResolverSet {
         code: &HashSet<String>,
         configs: &HashMap<String, String>,
         packages: &[WorkspacePackage],
-    ) -> (ResolverSet, Vec<String>) {
+    ) -> (ResolverSet, Vec<Warning>) {
         let links: Vec<(String, String)> = packages
             .iter()
             .map(|p| (format!("node_modules/{}", p.name), p.dir.clone()))
@@ -380,7 +383,7 @@ impl ResolverSet {
         for path in names {
             let info = analyze_tsconfig(path, configs, &mut warnings);
             if info.is_none() {
-                warnings.push(format!("tsconfig inválido: {path}"));
+                warnings.push(Warning::new(WarningCode::InvalidTsconfig, path.clone()));
             }
             scopes.insert(path.clone(), info);
         }
@@ -483,7 +486,7 @@ impl ResolverSet {
     }
 
     /// Warnings produced while resolving (tsconfigs ignored by the safety net).
-    pub fn take_warnings(&self) -> Vec<String> {
+    pub fn take_warnings(&self) -> Vec<Warning> {
         let mut fallback = self.fallback.lock().unwrap_or_else(|e| e.into_inner());
         std::mem::take(&mut fallback.warnings)
     }
@@ -517,7 +520,7 @@ impl ResolverSet {
                     if fallback.scopes.insert(s.to_string()) {
                         fallback
                             .warnings
-                            .push(format!("tsconfig ignorado na resolução: {s}"));
+                            .push(Warning::new(WarningCode::TsconfigIgnored, s));
                     }
                 }
                 self.resolver_for(None, &[])
@@ -582,7 +585,7 @@ mod tests {
     use super::*;
     use crate::workspace::{detect_workspaces, dirs_of};
 
-    fn build_with_warnings(code: &[&str], configs: &[(&str, &str)]) -> (ResolverSet, Vec<String>) {
+    fn build_with_warnings(code: &[&str], configs: &[(&str, &str)]) -> (ResolverSet, Vec<Warning>) {
         let code_set: HashSet<String> = code.iter().map(|s| s.to_string()).collect();
         let cfg: HashMap<String, String> = configs
             .iter()
@@ -714,7 +717,10 @@ mod tests {
             &["src/a.ts", "src/b.ts"],
             &[("tsconfig.json", "{ \"compilerOptions\": ")],
         );
-        assert_eq!(warnings, vec!["tsconfig inválido: tsconfig.json"]);
+        assert_eq!(
+            warnings,
+            vec![Warning::new(WarningCode::InvalidTsconfig, "tsconfig.json")]
+        );
         assert_eq!(
             r.resolve("src/a.ts", "./b"),
             Resolution::Internal("src/b.ts".into())
@@ -739,7 +745,10 @@ mod tests {
             &["a.ts"],
             &[("tsconfig.json", r#"{"extends":"./missing.json"}"#)],
         );
-        assert_eq!(w, vec!["extends não encontrado: missing.json"]);
+        assert_eq!(
+            w,
+            vec![Warning::new(WarningCode::ExtendsNotFound, "missing.json")]
+        );
         let (_, w) = build_with_warnings(
             &["a.ts"],
             &[(
@@ -895,8 +904,8 @@ mod tests {
         assert_eq!(
             w,
             vec![
-                "referência de tsconfig não encontrada: tsconfig.app.json",
-                "referência de tsconfig não encontrada: packages/x",
+                Warning::new(WarningCode::TsconfigReferenceNotFound, "tsconfig.app.json"),
+                Warning::new(WarningCode::TsconfigReferenceNotFound, "packages/x"),
             ]
         );
         assert_eq!(
@@ -921,7 +930,13 @@ mod tests {
                 ),
             ],
         );
-        assert_eq!(w, vec!["extends não encontrado: config/base.json"]);
+        assert_eq!(
+            w,
+            vec![Warning::new(
+                WarningCode::ExtendsNotFound,
+                "config/base.json"
+            )]
+        );
         assert_eq!(
             r.resolve("src/a.ts", "./b"),
             Resolution::Internal("src/b.ts".into())
@@ -958,7 +973,13 @@ mod tests {
                 r#"{"extends":"./config/base.json","compilerOptions":{"paths":{"@/*":["src/*"]}}}"#,
             )],
         );
-        assert_eq!(w, vec!["extends não encontrado: config/base.json"]);
+        assert_eq!(
+            w,
+            vec![Warning::new(
+                WarningCode::ExtendsNotFound,
+                "config/base.json"
+            )]
+        );
         assert_eq!(
             r.resolve("src/a.ts", "@/b"),
             Resolution::Internal("src/b.ts".into())
@@ -989,7 +1010,7 @@ mod tests {
         );
         assert_eq!(
             r.take_warnings(),
-            vec!["tsconfig ignorado na resolução: tsconfig.json"]
+            vec![Warning::new(WarningCode::TsconfigIgnored, "tsconfig.json")]
         );
     }
 

@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
+import { useT } from '../i18n/store';
 import { Icon } from './Icon';
 
 /**
@@ -6,6 +7,7 @@ import { Icon } from './Icon';
  * abaixo, vira uma disclosure recolhível.
  */
 export function Panel(p: { title: string; className: string; actions?: ReactNode; children: ReactNode }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const bodyId = useId();
@@ -24,7 +26,7 @@ export function Panel(p: { title: string; className: string; actions?: ReactNode
           onClick={() => setOpen((o) => !o)}
         >
           <Icon name="chevron" />
-          <span className="visually-hidden">{open ? `Recolher ${p.title.toLowerCase()}` : `Mostrar ${p.title.toLowerCase()}`}</span>
+          <span className="visually-hidden">{open ? t.panel.hide(p.title) : t.panel.show(p.title)}</span>
         </button>
       </div>
       <div id={bodyId} className="panel__body">

@@ -38,8 +38,8 @@ describe('AnalysisClient', () => {
     const w = new FakeWorker();
     const c = new AnalysisClient(w);
     const p = c.view([0]);
-    w.reply({ id: w.sent[0].id, ok: false, error: 'sessão não iniciada' });
-    await expect(p).rejects.toThrow('sessão não iniciada');
+    w.reply({ id: w.sent[0].id, ok: false, error: 'session not started' });
+    await expect(p).rejects.toThrow('session not started');
   });
 
   it('evento error rejeita pendentes e chama onCrash uma vez', async () => {
@@ -54,7 +54,7 @@ describe('AnalysisClient', () => {
     await expect(p1).rejects.toBeInstanceOf(WorkerCrashedError);
     await expect(p2).rejects.toBeInstanceOf(WorkerCrashedError);
     expect(cb).toHaveBeenCalledTimes(1);
-    expect(cb.mock.calls[0][0]).toContain('o worker de análise parou');
+    expect(cb.mock.calls[0][0]).toContain('analysis worker stopped');
   });
 
   it('frame fatal (WASM em pânico) rejeita pendentes com WorkerCrashedError e chama onCrash', async () => {
@@ -68,7 +68,7 @@ describe('AnalysisClient', () => {
     await expect(p1).rejects.toBeInstanceOf(WorkerCrashedError);
     await expect(p2).rejects.toBeInstanceOf(WorkerCrashedError);
     expect(cb).toHaveBeenCalledTimes(1);
-    expect(cb.mock.calls[0][0]).toBe('o worker de análise parou: unreachable');
+    expect(cb.mock.calls[0][0]).toBe('analysis worker stopped: unreachable');
     await expect(c.view([0])).rejects.toBeInstanceOf(WorkerCrashedError);
   });
 
@@ -87,8 +87,8 @@ describe('AnalysisClient', () => {
     const pending = c.ignoredDirs();
     c.dispose();
     expect(w.terminate).toHaveBeenCalled();
-    await expect(pending).rejects.toThrow();
-    await expect(c.start('x')).rejects.toThrow();
+    await expect(pending).rejects.toThrow('analysis closed');
+    await expect(c.start('x')).rejects.toThrow('analysis closed');
   });
 
   it('finish e start passam os argumentos certos', async () => {

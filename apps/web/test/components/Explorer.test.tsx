@@ -74,7 +74,7 @@ describe('Explorer', () => {
     store.getState().setSearchResults({ query: 'b', hits: [hit] });
     renderWith(store, <Explorer />);
     expect(screen.queryByRole('tree')).not.toBeInTheDocument();
-    const results = screen.getByRole('list', { name: 'Resultados para “b”' });
+    const results = screen.getByRole('list', { name: 'Results for “b”' });
     await userEvent.click(within(results).getByRole('button', { name: /src\/b\.ts/ }));
     expect(reveal).toHaveBeenCalledWith(hit);
     expect(store.getState().searchResults).toBeNull();
@@ -84,6 +84,6 @@ describe('Explorer', () => {
     const { store } = await setup();
     store.getState().setSearchResults({ query: 'zzz', hits: [] });
     renderWith(store, <Explorer />);
-    expect(screen.getByText('Nada encontrado para “zzz”.')).toBeInTheDocument();
+    expect(screen.getByText('Nothing found for “zzz”.')).toBeInTheDocument();
   });
 });

@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import type { DepRef, Detail, ImportKind, WeightedRef } from '@archviewer/core-wasm';
+import type { DepRef, Detail, WeightedRef } from '@archviewer/core-wasm';
+import { useT } from '../i18n/store';
 import { useGraphStore } from '../store/graph-store';
-import { basename, count, formatInt, REASON } from './format';
+import { basename } from './format';
 import { Icon } from './Icon';
 import { Panel } from './Panel';
 import { Snippet } from './Snippet';
@@ -10,13 +11,6 @@ type FileD = Extract<Detail, { kind: 'file' }>;
 type GroupD = Extract<Detail, { kind: 'group' }>;
 type ExternalD = Extract<Detail, { kind: 'external' }>;
 type Go = (ref: { id: number; path: string }) => void;
-
-const KIND_NOTE: Partial<Record<ImportKind, string>> = {
-  dynamic: 'dinâmico',
-  reexport: 'reexport',
-  require: 'require',
-  typeOnly: 'só tipos',
-};
 
 /** Navega até um nó: seleciona se já está desenhado; senão busca o caminho e revela. */
 function useGo(): Go {
@@ -38,22 +32,24 @@ function useGo(): Go {
 }
 
 function Figure(p: { label: string; value: number; testId: string }) {
+  const t = useT();
   return (
     <div className="figures__item">
       <dt className="label">{p.label}</dt>
       <dd className="figure" data-testid={p.testId}>
-        {formatInt(p.value)}
+        {t.fmt.int(p.value)}
       </dd>
     </div>
   );
 }
 
 function Section(p: { title: string; n?: number; children: ReactNode }) {
+  const t = useT();
   return (
     <section className="detail__section">
       <h4 className="detail__heading">
         {p.title}
-        {p.n !== undefined && <span className="detail__count num">{formatInt(p.n)}</span>}
+        {p.n !== undefined && <span className="detail__count num">{t.fmt.int(p.n)}</span>}
       </h4>
       {p.children}
     </section>
@@ -61,6 +57,7 @@ function Section(p: { title: string; n?: number; children: ReactNode }) {
 }
 
 function RefList(p: { label: string; refs: DepRef[]; go: Go; empty: string }) {
+  const t = useT();
   if (p.refs.length === 0) return <p className="muted">{p.empty}</p>;
   return (
     <ul className="refs" aria-label={p.label}>
@@ -69,7 +66,7 @@ function RefList(p: { label: string; refs: DepRef[]; go: Go; empty: string }) {
           <button type="button" className="ref" onClick={() => p.go(r)}>
             <code className="mono">{r.path}</code>
           </button>
-          {KIND_NOTE[r.kind] && <span className="refs__note">{KIND_NOTE[r.kind]}</span>}
+          {r.kind !== 'static' && <span className="refs__note">{t.importKind[r.kind]}</span>}
         </li>
       ))}
     </ul>
@@ -77,15 +74,16 @@ function RefList(p: { label: string; refs: DepRef[]; go: Go; empty: string }) {
 }
 
 function WeightedList(p: { label: string; refs: WeightedRef[]; go: Go }) {
-  if (p.refs.length === 0) return <p className="muted">Nenhuma.</p>;
+  const t = useT();
+  if (p.refs.length === 0) return <p className="muted">{t.detail.none}</p>;
   return (
     <ul className="refs" aria-label={p.label}>
       {p.refs.map((r) => (
         <li key={r.id} className="refs__item">
           <button type="button" className="ref" onClick={() => p.go(r)}>
-            <code className="mono">{r.path || '(raiz)'}</code>
+            <code className="mono">{r.path || t.detail.root}</code>
           </button>
-          <span className="refs__weight num">{formatInt(r.weight)}</span>
+          <span className="refs__weight num">{t.fmt.int(r.weight)}</span>
         </li>
       ))}
     </ul>
@@ -103,14 +101,15 @@ function Head(p: { title: string; path?: string; children?: ReactNode }) {
 }
 
 function CycleNote({ cycle }: { cycle?: string[] }) {
+  const t = useT();
   return (
     <div className="detail__warn">
       <p className="status-line status-line--error">
         <Icon name="cycle" />
-        Faz parte de um ciclo
+        {t.detail.inCycle}
       </p>
       {cycle && cycle.length > 0 && (
-        <ol className="cycle" aria-label="Ciclo">
+        <ol className="cycle" aria-label={t.detail.cycle}>
           {cycle.map((p, i) => (
             <li key={i}>
               <code className="mono">{p}</code>
@@ -123,21 +122,22 @@ function CycleNote({ cycle }: { cycle?: string[] }) {
 }
 
 function FileView({ d, go }: { d: FileD; go: Go }) {
+  const t = useT();
   const source = useGraphStore((s) => s.source);
   return (
     <>
       <Head title={basename(d.path)} path={d.path} />
       <dl className="figures">
-        <Figure label="Fan-in" value={d.fanIn} testId="fan-in" />
-        <Figure label="Fan-out" value={d.fanOut} testId="fan-out" />
+        <Figure label={t.detail.fanIn} value={d.fanIn} testId="fan-in" />
+        <Figure label={t.detail.fanOut} value={d.fanOut} testId="fan-out" />
       </dl>
       <p className="muted detail__meta">
-        {count(d.loc, 'linha', 'linhas')}, {d.language.toUpperCase()}
+        {t.detail.lines(d.loc)}, {d.language.toUpperCase()}
       </p>
       {d.cycle.length > 0 && <CycleNote cycle={d.cycle} />}
       {d.parseErrors.length > 0 && (
-        <Section title="Erros de parse" n={d.parseErrors.length}>
-          <ul className="errors" aria-label="Erros de parse">
+        <Section title={t.detail.parseErrors} n={d.parseErrors.length}>
+          <ul className="errors" aria-label={t.detail.parseErrors}>
             {d.parseErrors.map((e, i) => (
               <li key={i}>
                 <code className="mono">{`${e.line}:${e.column}`}</code> <span>{e.message}</span>
@@ -146,26 +146,26 @@ function FileView({ d, go }: { d: FileD; go: Go }) {
           </ul>
         </Section>
       )}
-      <Section title="Imports" n={d.imports.length}>
-        <RefList label="Imports" refs={d.imports} go={go} empty="Não importa nenhum arquivo." />
+      <Section title={t.detail.imports} n={d.imports.length}>
+        <RefList label={t.detail.imports} refs={d.imports} go={go} empty={t.detail.noImports} />
       </Section>
-      <Section title="Dependentes" n={d.importedBy.length}>
-        <RefList label="Dependentes" refs={d.importedBy} go={go} empty="Nenhum arquivo importa este." />
+      <Section title={t.detail.dependents} n={d.importedBy.length}>
+        <RefList label={t.detail.dependents} refs={d.importedBy} go={go} empty={t.detail.noDependents} />
       </Section>
       {d.unresolved.length > 0 && (
-        <Section title="Não resolvidos" n={d.unresolved.length}>
-          <ul className="errors" aria-label="Não resolvidos">
+        <Section title={t.detail.unresolved} n={d.unresolved.length}>
+          <ul className="errors" aria-label={t.detail.unresolved}>
             {d.unresolved.map((u, i) => (
               <li key={i}>
-                <code className="mono">{u.specifier}</code> <span className="muted">{REASON[u.reason]}</span>
+                <code className="mono">{u.specifier}</code> <span className="muted">{t.reasons[u.reason]}</span>
               </li>
             ))}
           </ul>
         </Section>
       )}
       {d.exports.length > 0 && (
-        <Section title="Exports" n={d.exports.length}>
-          <ul className="exports" aria-label="Exports">
+        <Section title={t.detail.exports} n={d.exports.length}>
+          <ul className="exports" aria-label={t.detail.exports}>
             {d.exports.map((e) => (
               <li key={e}>
                 <code className="mono">{e}</code>
@@ -175,7 +175,7 @@ function FileView({ d, go }: { d: FileD; go: Go }) {
         </Section>
       )}
       {source && (
-        <Section title="Trecho">
+        <Section title={t.detail.snippet}>
           <Snippet source={source} path={d.path} imports={d.imports} />
         </Section>
       )}
@@ -184,43 +184,46 @@ function FileView({ d, go }: { d: FileD; go: Go }) {
 }
 
 function GroupView({ d, go }: { d: GroupD; go: Go }) {
+  const t = useT();
   return (
     <>
       <Head title={d.label} path={d.path}>
-        <p className="muted">{d.groupKind === 'package' ? 'Pacote do workspace' : 'Pasta'}</p>
+        <p className="muted">{d.groupKind === 'package' ? t.detail.package : t.detail.folder}</p>
       </Head>
       <dl className="figures">
-        <Figure label="Arquivos" value={d.fileCount} testId="file-count" />
-        <Figure label="Linhas" value={d.loc} testId="loc" />
+        <Figure label={t.detail.files} value={d.fileCount} testId="file-count" />
+        <Figure label={t.detail.loc} value={d.loc} testId="loc" />
       </dl>
       {d.inCycle && <CycleNote />}
-      <Section title="Saída">
-        <WeightedList label="Maiores dependências de saída" refs={d.topOutgoing} go={go} />
+      <Section title={t.detail.outgoing}>
+        <WeightedList label={t.detail.topOutgoing} refs={d.topOutgoing} go={go} />
       </Section>
-      <Section title="Entrada">
-        <WeightedList label="Maiores dependências de entrada" refs={d.topIncoming} go={go} />
+      <Section title={t.detail.incoming}>
+        <WeightedList label={t.detail.topIncoming} refs={d.topIncoming} go={go} />
       </Section>
     </>
   );
 }
 
 function ExternalView({ d, go }: { d: ExternalD; go: Go }) {
+  const t = useT();
   return (
     <>
       <Head title={d.name}>
-        <p className="muted">Pacote externo</p>
+        <p className="muted">{t.detail.external}</p>
       </Head>
       <dl className="figures">
-        <Figure label="Fan-in" value={d.importedBy.length} testId="fan-in" />
+        <Figure label={t.detail.fanIn} value={d.importedBy.length} testId="fan-in" />
       </dl>
-      <Section title="Importado por" n={d.importedBy.length}>
-        <RefList label="Importado por" refs={d.importedBy} go={go} empty="Nenhum arquivo." />
+      <Section title={t.detail.importedBy} n={d.importedBy.length}>
+        <RefList label={t.detail.importedBy} refs={d.importedBy} go={go} empty={t.detail.noFiles} />
       </Section>
     </>
   );
 }
 
 export function DetailPanel() {
+  const t = useT();
   const selected = useGraphStore((s) => s.selected);
   const detail = useGraphStore((s) => s.detail);
   const detailError = useGraphStore((s) => s.detailError);
@@ -233,7 +236,7 @@ export function DetailPanel() {
   const canCollapse = parentId !== undefined && parentId !== 0 && expanded.includes(parentId);
   const collapse = canCollapse ? (
     <button type="button" className="key key--small" onClick={() => void toggle(parentId)}>
-      Recolher pasta
+      {t.detail.collapseFolder}
     </button>
   ) : undefined;
 
@@ -241,8 +244,8 @@ export function DetailPanel() {
   if (selected === null) {
     body = (
       <div className="panel__empty">
-        <p>Selecione um nó no grafo ou no explorador</p>
-        <p className="muted">Aqui aparecem imports, dependentes, ciclos e o trecho do arquivo.</p>
+        <p>{t.detail.emptyTitle}</p>
+        <p className="muted">{t.detail.emptyHint}</p>
       </div>
     );
   } else if (detailError === selected) {
@@ -250,14 +253,14 @@ export function DetailPanel() {
       <div className="panel__empty">
         <p className="status-line status-line--error">
           <Icon name="warning" />
-          Não foi possível carregar os detalhes
+          {t.detail.errorTitle}
         </p>
-        <p className="muted">Selecione o nó de novo ou escolha outro no grafo ou no explorador.</p>
+        <p className="muted">{t.detail.errorHint}</p>
       </div>
     );
   } else if (!detail || detail.id !== selected) {
     body = (
-      <div className="skeleton" aria-busy="true" aria-label="Carregando detalhes">
+      <div className="skeleton" aria-busy="true" aria-label={t.detail.loading}>
         <span className="skeleton__bar" />
         <span className="skeleton__bar skeleton__bar--short" />
         <span className="skeleton__block" />
@@ -272,7 +275,7 @@ export function DetailPanel() {
   }
 
   return (
-    <Panel title="Detalhes" className="panel--detail" actions={collapse}>
+    <Panel title={t.detail.title} className="panel--detail" actions={collapse}>
       <div className="detail">{body}</div>
     </Panel>
   );

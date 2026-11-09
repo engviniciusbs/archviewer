@@ -1,6 +1,5 @@
 ---
 source: crates/archviewer-core/tests/fixtures.rs
-assertion_line: 207
 expression: s.value
 ---
 {
@@ -14,7 +13,10 @@ expression: s.value
     "parseErrors": 1,
     "workspacePackages": 0,
     "warnings": [
-      "tsconfig inválido: tsconfig.json"
+      {
+        "code": "invalidTsconfig",
+        "subject": "tsconfig.json"
+      }
     ]
   },
   "default": {
@@ -150,7 +152,10 @@ expression: s.value
       }
     ],
     "warnings": [
-      "tsconfig inválido: tsconfig.json"
+      {
+        "code": "invalidTsconfig",
+        "subject": "tsconfig.json"
+      }
     ]
   }
 }

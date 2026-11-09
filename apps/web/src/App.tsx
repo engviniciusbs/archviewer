@@ -7,14 +7,16 @@ import { LoadingScreen } from './components/LoadingScreen';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar } from './components/Toolbar';
 import { GraphCanvas } from './renderer/GraphCanvas';
+import { useT } from './i18n/store';
 import { useGraphStore } from './store/graph-store';
 
 function Shell() {
+  const t = useT();
   return (
     <div className="shell">
       <Toolbar />
       <Explorer />
-      <main className="shell__graph" aria-label="Grafo de dependências">
+      <main className="shell__graph" aria-label={t.app.graph}>
         <GraphErrorBoundary>
           <GraphCanvas />
         </GraphErrorBoundary>

@@ -5,6 +5,7 @@ use std::collections::{BTreeSet, HashMap};
 use archviewer_core::analyzer::Analyzer;
 use archviewer_core::model::{
     AnalyzerConfig, Detail, FileDetail, ImportKind, NodeId, UnresolvedReason, VisibleGraph,
+    Warning, WarningCode,
 };
 use serde_json::{json, Value};
 
@@ -193,7 +194,7 @@ fn broken() {
     let issues = s.a.issues();
     assert_eq!(
         issues.warnings,
-        vec!["tsconfig inválido: tsconfig.json".to_string()]
+        vec![Warning::new(WarningCode::InvalidTsconfig, "tsconfig.json")]
     );
     assert_eq!(issues.parse_errors[0].path, "src/bad.ts");
     assert_eq!(issues.parse_errors[0].errors[0].line, 2);

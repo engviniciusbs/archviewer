@@ -37,14 +37,14 @@ describe('Toolbar', () => {
     const { container } = renderWith(store, <Toolbar />);
     const primaries = container.querySelectorAll('.key--primary');
     expect(primaries).toHaveLength(1);
-    expect(primaries[0]).toHaveTextContent('Abrir projeto');
+    expect(primaries[0]).toHaveTextContent('Open project');
   });
 
   it.each([
-    ['Ocultar externos', 'hideExternals'],
-    ['Ocultar só tipos', 'hideTypeOnly'],
-    ['Ocultar assets', 'hideAssets'],
-    ['Só ciclos', 'cyclesOnly'],
+    ['Hide externals', 'hideExternals'],
+    ['Hide type-only', 'hideTypeOnly'],
+    ['Hide assets', 'hideAssets'],
+    ['Cycles only', 'cyclesOnly'],
   ] as const)('a tecla "%s" alterna aria-pressed e chama setFilter', async (label, key) => {
     const { store } = await readyStore();
     const spy = vi.spyOn(store.getState(), 'setFilter');
@@ -64,7 +64,7 @@ describe('Toolbar', () => {
     const { store } = await readyStore(api);
     const user = fakeTimers();
     renderWith(store, <Toolbar />);
-    await user.type(screen.getByRole('combobox', { name: 'Buscar arquivo ou pasta' }), 'ts');
+    await user.type(screen.getByRole('combobox', { name: 'Search file or folder' }), 'ts');
     await act(async () => {
       vi.advanceTimersByTime(149);
     });
@@ -74,7 +74,7 @@ describe('Toolbar', () => {
     });
     expect(api.find).toHaveBeenCalledTimes(1);
     expect(api.find).toHaveBeenCalledWith('ts', 50);
-    const list = screen.getByRole('listbox', { name: 'Resultados da busca' });
+    const list = screen.getByRole('listbox', { name: 'Search results' });
     expect(within(list).getAllByRole('option').map((o) => o.textContent)).toEqual([
       expect.stringContaining('src/a.ts'),
       expect.stringContaining('src/b.ts'),
@@ -89,7 +89,7 @@ describe('Toolbar', () => {
     store.setState({ reveal });
     const user = fakeTimers();
     renderWith(store, <Toolbar />);
-    const input = screen.getByRole('combobox', { name: 'Buscar arquivo ou pasta' });
+    const input = screen.getByRole('combobox', { name: 'Search file or folder' });
     await user.type(input, 'b');
     await act(async () => {
       vi.advanceTimersByTime(150);
@@ -107,7 +107,7 @@ describe('Toolbar', () => {
     store.setState({ reveal });
     const user = fakeTimers();
     renderWith(store, <Toolbar />);
-    await user.type(screen.getByRole('combobox', { name: 'Buscar arquivo ou pasta' }), 'ts');
+    await user.type(screen.getByRole('combobox', { name: 'Search file or folder' }), 'ts');
     await act(async () => {
       vi.advanceTimersByTime(150);
     });

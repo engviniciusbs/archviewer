@@ -32,7 +32,7 @@ export type WorkerLike = Pick<Worker, 'postMessage' | 'terminate' | 'addEventLis
 
 export class WorkerCrashedError extends Error {
   constructor(detail?: string) {
-    super(detail ? `o worker de análise parou: ${detail}` : 'o worker de análise parou');
+    super(detail ? `analysis worker stopped: ${detail}` : 'analysis worker stopped');
     this.name = 'WorkerCrashedError';
   }
 }
@@ -51,7 +51,7 @@ export class AnalysisClient implements AnalysisApi {
   constructor(private worker: WorkerLike) {
     worker.addEventListener('message', (e) => this.onMessage((e as MessageEvent<WorkerMessage>).data));
     worker.addEventListener('error', (e) => this.crash((e as ErrorEvent).message));
-    worker.addEventListener('messageerror', () => this.crash('mensagem ilegível'));
+    worker.addEventListener('messageerror', () => this.crash('unreadable message'));
   }
 
   private onMessage(res: WorkerMessage): void {
@@ -124,7 +124,7 @@ export class AnalysisClient implements AnalysisApi {
 
   dispose(): void {
     if (this.dead) return;
-    const err = new Error('análise encerrada');
+    const err = new Error('analysis closed');
     this.dead = err;
     this.worker.terminate();
     this.rejectAll(err);

@@ -1,19 +1,17 @@
 import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 import type { SearchHit } from '@archviewer/core-wasm';
+import { useT } from '../i18n/store';
 import { useGraphStore, type Filters } from '../store/graph-store';
 import { Icon } from './Icon';
+import { LanguageSelect } from './LanguageSelect';
 import { useOpenProject } from './useOpenProject';
 
 const SEARCH_DEBOUNCE_MS = 150;
 
-const FILTERS: { key: keyof Filters; label: string }[] = [
-  { key: 'hideExternals', label: 'Ocultar externos' },
-  { key: 'hideTypeOnly', label: 'Ocultar só tipos' },
-  { key: 'hideAssets', label: 'Ocultar assets' },
-  { key: 'cyclesOnly', label: 'Só ciclos' },
-];
+const FILTERS: (keyof Filters)[] = ['hideExternals', 'hideTypeOnly', 'hideAssets', 'cyclesOnly'];
 
 function SearchBox() {
+  const t = useT();
   const search = useGraphStore((s) => s.search);
   const results = useGraphStore((s) => s.searchResults);
   const setResults = useGraphStore((s) => s.setSearchResults);
@@ -83,7 +81,7 @@ function SearchBox() {
         type="search"
         name="q"
         role="combobox"
-        aria-label="Buscar arquivo ou pasta"
+        aria-label={t.search.label}
         aria-autocomplete="list"
         aria-expanded={expanded}
         aria-controls={listId}
@@ -100,7 +98,7 @@ function SearchBox() {
         onBlur={() => setOpen(false)}
         onKeyDown={onKeyDown}
       />
-      <ul id={listId} role="listbox" aria-label="Resultados da busca" className="search__list cut" hidden={!expanded}>
+      <ul id={listId} role="listbox" aria-label={t.search.results} className="search__list cut" hidden={!expanded}>
         {expanded &&
           hits.map((h, i) => (
             <li
@@ -122,6 +120,7 @@ function SearchBox() {
 }
 
 export function Toolbar() {
+  const t = useT();
   const filters = useGraphStore((s) => s.filters);
   const setFilter = useGraphStore((s) => s.setFilter);
   const projectName = useGraphStore((s) => s.projectName);
@@ -134,26 +133,27 @@ export function Toolbar() {
         {projectName && <span className="toolbar__project">{projectName}</span>}
       </p>
       <SearchBox />
-      <div className="tray" role="group" aria-label="Filtros">
-        {FILTERS.map((f) => (
+      <div className="tray" role="group" aria-label={t.toolbar.filters}>
+        {FILTERS.map((key) => (
           <button
-            key={f.key}
+            key={key}
             type="button"
             className="key key--tray"
-            aria-pressed={filters[f.key]}
-            onClick={() => setFilter(f.key, !filters[f.key])}
+            aria-pressed={filters[key]}
+            onClick={() => setFilter(key, !filters[key])}
           >
-            {f.label}
+            {t.filters[key]}
           </button>
         ))}
       </div>
+      <LanguageSelect className="toolbar__language" />
       <button type="button" className="key key--primary toolbar__open" onClick={() => void open()}>
-        Abrir projeto
+        {t.open.button}
       </button>
       {error && (
         <p className="toolbar__error" role="alert">
           <Icon name="warning" />
-          Não foi possível abrir a pasta: {error}
+          {t.open.error(error)}
         </p>
       )}
     </header>

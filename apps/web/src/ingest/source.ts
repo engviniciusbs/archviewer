@@ -40,7 +40,7 @@ export function memorySource(name: string, files: Record<string, string>): DirSo
     list: async (dir) => list(dir),
     read: async (path) => {
       const content = files[path];
-      if (content === undefined) throw new Error(`arquivo não encontrado: ${path}`);
+      if (content === undefined) throw new Error(`file not found: ${path}`);
       return content;
     },
   };
@@ -70,7 +70,7 @@ export function fromFileList(files: ArrayLike<File>): DirSource {
     list: async (dir) => list(dir),
     read: async (path) => {
       const f = byPath.get(path);
-      if (!f) throw new Error(`arquivo não encontrado: ${path}`);
+      if (!f) throw new Error(`file not found: ${path}`);
       return f.text();
     },
   };

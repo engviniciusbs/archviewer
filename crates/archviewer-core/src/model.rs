@@ -92,6 +92,37 @@ pub enum SkipReason {
     NotIngestible,
 }
 
+/// What a warning is about; the UI turns it into a sentence in its own language.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub enum WarningCode {
+    ExtendsNotFound,
+    InvalidTsconfig,
+    TsconfigReferenceNotFound,
+    TsconfigIgnored,
+    InvalidGlob,
+    InvalidPackageJson,
+}
+
+/// `subject` is the path, glob or scope the warning refers to.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct Warning {
+    pub code: WarningCode,
+    pub subject: String,
+}
+
+impl Warning {
+    pub fn new(code: WarningCode, subject: impl Into<String>) -> Self {
+        Self {
+            code,
+            subject: subject.into(),
+        }
+    }
+}
+
 /// Position is 1-based; column counts characters within the line.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -134,7 +165,7 @@ pub struct Issues {
     pub unresolved: Vec<UnresolvedImport>,
     pub skipped: Vec<SkippedFile>,
     pub parse_errors: Vec<FileParseErrors>,
-    pub warnings: Vec<String>,
+    pub warnings: Vec<Warning>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -149,7 +180,7 @@ pub struct Summary {
     pub skipped: u32,
     pub parse_errors: u32,
     pub workspace_packages: u32,
-    pub warnings: Vec<String>,
+    pub warnings: Vec<Warning>,
 }
 
 /// External nodes have `parent_id: None`.

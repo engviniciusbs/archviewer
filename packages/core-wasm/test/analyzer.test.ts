@@ -48,7 +48,7 @@ describe('core-wasm boundary', () => {
     const d = a.detail(lazy.id)!;
     expect(d.kind).toBe('file');
     if (d.kind === 'file') expect(d.imports.map((i) => i.kind)).toEqual(['dynamic', 'dynamic']);
-    expect(() => a.addFiles([])).toThrow('análise já finalizada');
+    expect(() => a.addFiles([])).toThrow('analysis already finished');
     expect(a.detail(999_999)).toBeUndefined();
     a.free();
   });
@@ -72,6 +72,19 @@ describe('core-wasm boundary', () => {
     ]);
     const s = a.finish();
     expect(s).toMatchObject({ edges: 2, unresolved: 0, warnings: [] });
+    a.free();
+  });
+
+  it('avisos chegam estruturados como { code, subject }', () => {
+    const a = new Analyzer({ projectName: 'broken', maxFileBytes: 2_097_152 });
+    a.addFiles([
+      { path: 'tsconfig.json', content: '{ nope' },
+      { path: 'src/a.ts', content: '' },
+    ]);
+    const s = a.finish();
+    const expected = [{ code: 'invalidTsconfig', subject: 'tsconfig.json' }];
+    expect(s.warnings).toEqual(expected);
+    expect(a.issues().warnings).toEqual(expected);
     a.free();
   });
 

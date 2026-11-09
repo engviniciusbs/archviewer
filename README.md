@@ -11,8 +11,6 @@
 
 Open a project folder and ArchViewer draws its folders, files and imports as a graph you can expand, collapse and search. Nothing to install, no account, no upload.
 
-> **Note:** the interface is currently in Portuguese. An English UI is on the [roadmap](#roadmap).
-
 ## Features
 
 - **Interactive graph**: WebGL rendering with Sigma.js and graphology. Folders start collapsed and expand on demand, so large projects stay readable.
@@ -20,6 +18,7 @@ Open a project folder and ArchViewer draws its folders, files and imports as a g
 - **Cycles and loose ends**: circular dependencies are highlighted, and unresolved imports are listed with the reason.
 - **Explorer, search and details**: a file tree, search by name or path, and a detail panel with fan-in, fan-out, imports, dependents and a code snippet.
 - **Monorepo aware**: pnpm and npm/yarn workspaces are detected and shown as packages.
+- **English and Portuguese**: the interface follows your browser language, and a selector switches it. New languages are one file away ([how to translate](CONTRIBUTING.md#translating-archviewer)).
 - **Private by design**: files are read locally and analyzed on your machine. No file, path or metric is sent anywhere.
 
 ## How it works
@@ -75,7 +74,6 @@ archviewer/
 
 Planned next, roughly in this order:
 
-- **English interface** (i18n EN/PT, following the browser language)
 - **Export and share**: PNG/SVG, JSON, Mermaid and a README badge
 - **Metrics and heatmap**: color nodes by fan-in, fan-out and size to find hotspots
 - **Dead code**: files nobody imports and unused exports
