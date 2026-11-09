@@ -60,6 +60,23 @@ describe('buildSvg', () => {
     }
   });
 
+  it('rótulo do nó mais à direita cabe na imagem', () => {
+    const label = 'vite.config.ts.with-a-long-name';
+    const svg = buildSvg({ nodes: [n(0, 0), n(10, 0, { label })], edges: [] }, theme);
+    const width = Number(/width="(\d+)"/.exec(svg)![1]);
+    const textX = attr(svg, 'text', 'x')[0]!;
+    // Estimativa conservadora da largura do texto: 0,6 em por caractere.
+    expect(textX + label.length * 12 * 0.6).toBeLessThanOrEqual(width);
+  });
+
+  it('a seta tem tamanho fixo, independente da espessura da aresta', () => {
+    const svg = buildSvg(
+      { nodes: [n(0, 0), n(10, 0)], edges: [{ source: 0, target: 1, size: 6, color: theme.rule2 }] },
+      theme,
+    );
+    expect(svg).toMatch(/<marker[^>]*markerUnits="userSpaceOnUse"/);
+  });
+
   it('escapa XML nos rótulos', () => {
     const svg = buildSvg({ nodes: [n(0, 0, { label: `a&b<"c>` })], edges: [] }, theme);
     expect(svg).toContain('a&amp;b&lt;&quot;c&gt;');

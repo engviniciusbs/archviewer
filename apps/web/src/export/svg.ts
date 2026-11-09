@@ -30,19 +30,25 @@ export function buildSvg(scene: Scene, theme: GraphTheme): string {
   const scale = (SVG_MAX - 2 * SVG_PAD) / (Math.max(rx, ry) || 1);
   const innerW = rx * scale;
   const innerH = ry * scale;
-  const width = Math.round(Math.max(innerW + 2 * SVG_PAD, SVG_MIN));
+  const baseWidth = Math.max(innerW + 2 * SVG_PAD, SVG_MIN);
   const height = Math.round(Math.max(innerH + 2 * SVG_PAD, SVG_MIN));
-  const offX = (width - innerW) / 2;
+  const offX = (baseWidth - innerW) / 2;
   const offY = (height - innerH) / 2;
   const px = (x: number) => offX + (x - minX) * scale;
   const py = (y: number) => offY + (maxY - y) * scale;
+  // Rótulos saem à direita do nó: a imagem cresce para o mais comprido caber (estimativa de 0,6 em por caractere).
+  const labelEnd = Math.max(
+    0,
+    ...scene.nodes.filter((n) => n.label).map((n) => px(n.x) + n.size + 4 + n.label.length * LABEL_SIZE * 0.6),
+  );
+  const width = Math.ceil(Math.max(baseWidth, labelEnd + SVG_PAD / 2));
 
   const colors = [...new Set(scene.edges.map((e) => e.color))];
   const markerId = (c: string) => `a${colors.indexOf(c)}`;
   const markers = colors
     .map(
       (c) =>
-        `<marker id="${markerId(c)}" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${xml(c)}"/></marker>`,
+        `<marker id="${markerId(c)}" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${xml(c)}"/></marker>`,
     )
     .join('');
 

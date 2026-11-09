@@ -18,6 +18,7 @@ Open a project folder and ArchViewer draws its folders, files and imports as a g
 - **Cycles and loose ends**: circular dependencies are highlighted, and unresolved imports are listed with the reason.
 - **Explorer, search and details**: a file tree, search by name or path, and a detail panel with fan-in, fan-out, imports, dependents and a code snippet.
 - **Monorepo aware**: pnpm and npm/yarn workspaces are detected and shown as packages.
+- **Export and share**: download the current view as PNG or SVG, copy it as a Mermaid diagram, download the full file graph as JSON, or copy a README badge with your project's file and cycle counts.
 - **English and Portuguese**: the interface follows your browser language, and a selector switches it. New languages are one file away ([how to translate](CONTRIBUTING.md#translating-archviewer)).
 - **Private by design**: files are read locally and analyzed on your machine. No file, path or metric is sent anywhere.
 
@@ -74,7 +75,6 @@ archviewer/
 
 Planned next, roughly in this order:
 
-- **Export and share**: PNG/SVG, JSON, Mermaid and a README badge
 - **Metrics and heatmap**: color nodes by fan-in, fan-out and size to find hotspots
 - **Dead code**: files nobody imports and unused exports
 - **Compare versions**: what changed in the architecture between two branches

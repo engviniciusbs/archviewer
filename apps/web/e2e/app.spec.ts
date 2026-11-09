@@ -1,10 +1,12 @@
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 
 const SAMPLE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../fixtures/sample-project');
 
-test('abre o sample-project e navega pela arquitetura', async ({ page }) => {
+test('abre o sample-project e navega pela arquitetura', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const problems: string[] = [];
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   page.on('console', (m) => {
@@ -75,6 +77,33 @@ test('abre o sample-project e navega pela arquitetura', async ({ page }) => {
   await page.getByRole('button', { name: 'Hide assets' }).click();
   await expect(issues.getByRole('table')).toHaveCount(0);
   await expect(issues.getByText('Every import points to a file or a package.')).toBeVisible();
+
+  // Exportar: JSON completo, PNG da visão atual e Mermaid na área de transferência.
+  const exportMenu = async (item: string) => {
+    await page.getByRole('button', { name: 'Export' }).click();
+    await page.getByRole('menuitem', { name: item }).click();
+  };
+  const readDownload = async (item: string) => {
+    const pending = page.waitForEvent('download');
+    await exportMenu(item);
+    const download = await pending;
+    const file = await download.path();
+    return { name: download.suggestedFilename(), bytes: await readFile(file) };
+  };
+
+  const json = await readDownload('Full graph (JSON)');
+  expect(json.name).toBe('sample-project-archviewer.json');
+  const graph = JSON.parse(json.bytes.toString('utf8'));
+  expect(graph.files).toHaveLength(8);
+  expect(graph.cycles).toEqual([['src/circular/a.ts', 'src/circular/b.ts']]);
+
+  const png = await readDownload('PNG image');
+  expect(png.name).toBe('sample-project-archviewer.png');
+  expect([...png.bytes.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+
+  await exportMenu('Mermaid diagram');
+  await expect(page.getByText('Copied to the clipboard')).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^flowchart LR/);
 
   // Troca para português: a interface e os números mudam sem reabrir o projeto.
   await page.getByRole('combobox', { name: 'Language' }).selectOption({ label: 'Português' });
