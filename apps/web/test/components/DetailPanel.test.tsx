@@ -27,6 +27,9 @@ const fileDetail = (o: Partial<Extract<Detail, { kind: 'file' }>> = {}): Detail 
   fanIn: 1,
   fanOut: 2,
   parseErrors: [],
+  usage: 'used',
+  entryReason: undefined,
+  unusedExports: [],
   ...o,
 });
 

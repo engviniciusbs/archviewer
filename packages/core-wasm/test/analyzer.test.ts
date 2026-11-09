@@ -87,6 +87,18 @@ describe('core-wasm boundary', () => {
     a.free();
   });
 
+  it('deadCode: undefined antes de finish, em camelCase depois', () => {
+    const a = new Analyzer({ projectName: 'sample', maxFileBytes: 2_097_152 });
+    a.addFiles(loadFixture('sample-project'));
+    expect(a.deadCode()).toBeUndefined();
+    a.finish();
+    const d = a.deadCode()!;
+    expect(d.fallback).toBe(true);
+    expect(d.unusedFiles).toContain('src/index.ts');
+    expect(Object.keys(d)).toEqual(['entries', 'unusedFiles', 'testOnlyFiles', 'unusedExports', 'fallback']);
+    a.free();
+  });
+
   it('avisos chegam estruturados como { code, subject }', () => {
     const a = new Analyzer({ projectName: 'broken', maxFileBytes: 2_097_152 });
     a.addFiles([

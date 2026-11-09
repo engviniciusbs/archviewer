@@ -1,5 +1,6 @@
 pub mod analyzer;
 pub mod cycles;
+pub(crate) mod dead;
 pub(crate) mod detail;
 pub(crate) mod export;
 pub(crate) mod graph;

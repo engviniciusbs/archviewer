@@ -107,6 +107,7 @@ impl Analyzer {
             cycles,
             unresolved: issues.unresolved,
             warnings: issues.warnings,
+            dead_code: self.dead_code().unwrap_or_default(),
         })
     }
 }

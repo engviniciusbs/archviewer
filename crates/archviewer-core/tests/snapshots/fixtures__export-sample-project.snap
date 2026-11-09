@@ -237,5 +237,34 @@ expression: e
       "reason": "asset"
     }
   ],
-  "warnings": []
+  "warnings": [],
+  "deadCode": {
+    "entries": [],
+    "unusedFiles": [
+      "src/dynamic/lazy.ts",
+      "src/index.ts"
+    ],
+    "testOnlyFiles": [],
+    "unusedExports": [
+      {
+        "path": "src/circular/a.ts",
+        "names": [
+          "circularCall"
+        ]
+      },
+      {
+        "path": "src/circular/b.ts",
+        "names": [
+          "circularCall"
+        ]
+      },
+      {
+        "path": "src/components/Card.tsx",
+        "names": [
+          "CardProps"
+        ]
+      }
+    ],
+    "fallback": true
+  }
 }

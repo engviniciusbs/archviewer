@@ -57,6 +57,7 @@ pub fn is_config(path: &str) -> bool {
     let name = file_name(path);
     name == "package.json"
         || name == "pnpm-workspace.yaml"
+        || name == "index.html"
         || ((name.starts_with("tsconfig") || name.starts_with("jsconfig"))
             && name.ends_with(".json"))
 }

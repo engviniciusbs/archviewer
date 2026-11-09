@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use crate::analyzer::Analyzer;
 use crate::graph::Graph;
 use crate::model::{
-    GroupKind, ImportKind, NodeId, NodeKind, NodeMetrics, VEdge, VNode, VisibleGraph,
+    FileUsage, GroupKind, ImportKind, NodeId, NodeKind, NodeMetrics, VEdge, VNode, VisibleGraph,
 };
 
 fn is_group(g: &Graph, id: NodeId) -> bool {
@@ -105,15 +105,22 @@ impl Analyzer {
         // Descendant file counts and lines, bottom-up (children appear after parents in `order`).
         let mut files_below = vec![0u32; n];
         let mut loc_below = vec![0u32; n];
+        let mut unused_below = vec![0u32; n];
+        let dead = self.dead();
         for &id in order.iter().rev() {
             let node = &g.nodes[id as usize];
             if node.kind == NodeKind::File {
                 files_below[id as usize] = 1;
                 loc_below[id as usize] = node.file.as_ref().map_or(0, |f| f.loc);
+                let unused = dead
+                    .and_then(|d| d.usage[id as usize])
+                    .is_some_and(|(u, _)| u == FileUsage::Unused);
+                unused_below[id as usize] = u32::from(unused);
             }
             if let Some(p) = node.parent {
                 files_below[p as usize] += files_below[id as usize];
                 loc_below[p as usize] += loc_below[id as usize];
+                unused_below[p as usize] += unused_below[id as usize];
             }
         }
 
@@ -158,7 +165,7 @@ impl Analyzer {
                     fan_in: fan_in[i].len() as u32,
                     fan_out: fan_out[i].len() as u32,
                     loc: loc_below[i],
-                    unused: 0,
+                    unused: unused_below[i],
                 },
             });
         }

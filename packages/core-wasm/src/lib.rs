@@ -6,8 +6,8 @@
 //! (de)serialization failure) and failures surface as thrown JS `Error`s.
 
 use archviewer_core::model::{
-    AddResult, AnalyzerConfig, Detail, FileInput, GraphExport, Issues, SearchHit, Summary,
-    VisibleGraph,
+    AddResult, AnalyzerConfig, DeadCode, Detail, FileInput, GraphExport, Issues, SearchHit,
+    Summary, VisibleGraph,
 };
 use archviewer_core::paths;
 use tsify::{Ts, Tsify};
@@ -82,6 +82,12 @@ impl Analyzer {
 
     pub fn issues(&self) -> Result<Ts<Issues>, JsError> {
         Ok(self.0.issues().into_ts()?)
+    }
+
+    /// Entry points, unreachable files and unused exports; `undefined` until `finish` has run.
+    #[wasm_bindgen(js_name = deadCode)]
+    pub fn dead_code(&self) -> Result<Option<Ts<DeadCode>>, JsError> {
+        Ok(self.0.dead_code().map(|d| d.into_ts()).transpose()?)
     }
 
     /// The whole file graph; `undefined` until `finish` has run.

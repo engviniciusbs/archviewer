@@ -48,6 +48,7 @@ const finishResult = (defaultExpansion: number[]): FinishResult => ({
   summary: {} as FinishResult['summary'],
   issues: { unresolved: [], skipped: [], parseErrors: [], warnings: [] },
   defaultExpansion,
+  deadCode: { entries: [], unusedFiles: ['a.ts'], testOnlyFiles: [], unusedExports: [], fallback: true },
 });
 
 function makeApi(defaultExpansion: number[] = [0]) {
@@ -446,5 +447,12 @@ describe('exportGraph', () => {
     const store = createGraphStore({ api: () => asApi(api) });
     expect(await store.getState().exportGraph()).toBeNull();
     expect(api.exportGraph).not.toHaveBeenCalled();
+  });
+});
+
+describe('deadCode', () => {
+  it('guarda o código morto que o finish devolve', async () => {
+    const { store } = await ready();
+    expect(store.getState().deadCode).toEqual(finishResult([0]).deadCode);
   });
 });

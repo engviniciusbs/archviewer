@@ -266,6 +266,10 @@ pub struct FileDetail {
     pub fan_in: u32,
     pub fan_out: u32,
     pub parse_errors: Vec<ParseError>,
+    pub usage: FileUsage,
+    pub entry_reason: Option<EntryReason>,
+    /// Exported names nobody imports (empty for entries, whose exports are public API).
+    pub unused_exports: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -339,6 +343,9 @@ mod tests {
             fan_in: 0,
             fan_out: 0,
             parse_errors: vec![],
+            usage: FileUsage::Used,
+            entry_reason: None,
+            unused_exports: vec![],
         });
         round_trip(file, "file");
 
@@ -413,4 +420,59 @@ pub struct GraphExport {
     pub cycles: Vec<Vec<String>>,
     pub unresolved: Vec<UnresolvedImport>,
     pub warnings: Vec<Warning>,
+    pub dead_code: DeadCode,
+}
+
+/// Why a file counts as an entry point. Listed in precedence order.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub enum EntryReason {
+    PackageJson,
+    Script,
+    Html,
+    Framework,
+    Config,
+    Test,
+    Story,
+    Declaration,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub enum FileUsage {
+    Entry,
+    Used,
+    TestOnly,
+    Unused,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct EntryPoint {
+    pub path: String,
+    pub reason: EntryReason,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct UnusedExports {
+    pub path: String,
+    pub names: Vec<String>,
+}
+
+/// Unreachable files and unused exports, from heuristic entry points. With `fallback`,
+/// no production entry was found and "unused" means "not an entry and nobody imports it".
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct DeadCode {
+    pub entries: Vec<EntryPoint>,
+    pub unused_files: Vec<String>,
+    pub test_only_files: Vec<String>,
+    pub unused_exports: Vec<UnusedExports>,
+    pub fallback: bool,
 }

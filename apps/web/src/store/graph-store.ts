@@ -1,7 +1,7 @@
 import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { Detail, GraphExport, Issues, SearchHit, Summary, VisibleGraph } from '@archviewer/core-wasm';
+import type { DeadCode, Detail, GraphExport, Issues, SearchHit, Summary, VisibleGraph } from '@archviewer/core-wasm';
 import { createAnalysisClient, type AnalysisApi } from '../analysis/client';
 import { scan } from '../ingest/scan';
 import { readInto, type IngestSkip, type ReadProgress } from '../ingest/read';
@@ -27,6 +27,8 @@ export interface GraphState {
   elapsedMs: number | null;
   summary: Summary | null;
   issues: Issues | null;
+  /** Entradas, arquivos sem uso e exports sem uso; null antes do fim da análise. */
+  deadCode: DeadCode | null;
   ingestSkipped: IngestSkip[];
   graph: VisibleGraph;
   expanded: number[];
@@ -110,6 +112,7 @@ const initialData = (): DataState => ({
   elapsedMs: null,
   summary: null,
   issues: null,
+  deadCode: null,
   ingestSkipped: [],
   graph: emptyGraph(),
   expanded: [],
@@ -266,6 +269,7 @@ export function createGraphStore(deps: { api: () => AnalysisApi; now?: () => num
             phase: 'ready',
             summary: fin.summary,
             issues: fin.issues,
+            deadCode: fin.deadCode,
             graph,
             expanded: union([], fin.defaultExpansion),
             elapsedMs: now() - t0,
