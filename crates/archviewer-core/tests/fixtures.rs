@@ -272,3 +272,46 @@ fn export_monorepo_package() {
         .unwrap();
     assert_eq!(button.package.as_deref(), Some("@acme/ui"));
 }
+
+#[test]
+fn view_metrics() {
+    let s = snapshot("sample-project");
+    let a = &s.a;
+    let by_path =
+        |g: &VisibleGraph, p: &str| g.nodes.iter().find(|n| n.path == p).cloned().unwrap();
+
+    // Arquivo: igual ao detalhe.
+    let file = by_path(&s.full, "src/circular/a.ts");
+    let d = file_detail(&s, "src/circular/a.ts");
+    assert_eq!(
+        (file.metrics.fan_in, file.metrics.fan_out),
+        (d.fan_in, d.fan_out)
+    );
+    assert_eq!(file.metrics.loc, 11);
+
+    // Grupo recolhido: só conta o que cruza a borda (a <-> b fica de fora).
+    let group = by_path(&s.default, "src/circular");
+    assert!(!group.expanded);
+    let inside = ["src/circular/a.ts", "src/circular/b.ts"];
+    let outside_importers: BTreeSet<String> = inside
+        .iter()
+        .flat_map(|p| file_detail(&s, p).imported_by)
+        .map(|r| r.path)
+        .filter(|p| !inside.contains(&p.as_str()))
+        .collect();
+    let outside_imports: BTreeSet<String> = inside
+        .iter()
+        .flat_map(|p| file_detail(&s, p).imports)
+        .map(|r| r.path)
+        .filter(|p| !inside.contains(&p.as_str()))
+        .collect();
+    assert_eq!(group.metrics.fan_in as usize, outside_importers.len());
+    assert_eq!(group.metrics.fan_out as usize, outside_imports.len());
+    assert_eq!(group.metrics.loc, 22);
+
+    // Externo: importadores distintos, sem saída.
+    let react = by_path(&s.default, "react");
+    assert!(react.metrics.fan_in >= 1);
+    assert_eq!((react.metrics.fan_out, react.metrics.loc), (0, 0));
+    let _ = a;
+}

@@ -197,6 +197,19 @@ pub struct VNode {
     pub in_cycle: bool,
     pub expandable: bool,
     pub expanded: bool,
+    pub metrics: NodeMetrics,
+}
+
+/// Per-node numbers for the heatmap. For a collapsed group, fan-in and fan-out only count
+/// files and externals outside the group; `loc` and `unused` add up the files inside.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+pub struct NodeMetrics {
+    pub fan_in: u32,
+    pub fan_out: u32,
+    pub loc: u32,
+    pub unused: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

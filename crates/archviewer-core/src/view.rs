@@ -4,7 +4,9 @@ use std::collections::{HashMap, HashSet};
 
 use crate::analyzer::Analyzer;
 use crate::graph::Graph;
-use crate::model::{GroupKind, ImportKind, NodeId, NodeKind, VEdge, VNode, VisibleGraph};
+use crate::model::{
+    GroupKind, ImportKind, NodeId, NodeKind, NodeMetrics, VEdge, VNode, VisibleGraph,
+};
 
 fn is_group(g: &Graph, id: NodeId) -> bool {
     g.nodes
@@ -100,16 +102,31 @@ impl Analyzer {
             }
         }
 
-        // Descendant file counts, bottom-up (children appear after parents in `order`).
+        // Descendant file counts and lines, bottom-up (children appear after parents in `order`).
         let mut files_below = vec![0u32; n];
+        let mut loc_below = vec![0u32; n];
         for &id in order.iter().rev() {
             let node = &g.nodes[id as usize];
             if node.kind == NodeKind::File {
                 files_below[id as usize] = 1;
+                loc_below[id as usize] = node.file.as_ref().map_or(0, |f| f.loc);
             }
             if let Some(p) = node.parent {
                 files_below[p as usize] += files_below[id as usize];
+                loc_below[p as usize] += loc_below[id as usize];
             }
+        }
+
+        // Fan-in/out per representative: distinct files (and externals) across its border.
+        let mut fan_in: Vec<HashSet<NodeId>> = vec![HashSet::new(); n];
+        let mut fan_out: Vec<HashSet<NodeId>> = vec![HashSet::new(); n];
+        for e in &g.edges {
+            let (from, to) = (rep[e.from as usize], rep[e.to as usize]);
+            if from == to {
+                continue;
+            }
+            fan_in[to as usize].insert(e.from);
+            fan_out[from as usize].insert(e.to);
         }
 
         let mut nodes: Vec<VNode> = Vec::new();
@@ -137,6 +154,12 @@ impl Analyzer {
                 in_cycle: node.in_cycle,
                 expandable: node.kind == NodeKind::Group && !node.children.is_empty(),
                 expanded: node.kind == NodeKind::Group && exp[i],
+                metrics: NodeMetrics {
+                    fan_in: fan_in[i].len() as u32,
+                    fan_out: fan_out[i].len() as u32,
+                    loc: loc_below[i],
+                    unused: 0,
+                },
             });
         }
 
