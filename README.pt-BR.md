@@ -18,6 +18,8 @@ Abra a pasta de um projeto e o ArchViewer desenha as pastas, os arquivos e os im
 - **Ciclos e pendências**: dependências circulares ficam destacadas, e os imports não resolvidos aparecem listados com o motivo.
 - **Explorador, busca e detalhes**: árvore de arquivos, busca por nome ou caminho e um painel com fan-in, fan-out, imports, dependentes e um trecho do código.
 - **Entende monorepos**: workspaces do pnpm e do npm/yarn são detectados e aparecem como pacotes.
+- **Heatmap**: colore o grafo por fan-in, fan-out ou linhas para achar pontos críticos e pastas acopladas demais.
+- **Código sem uso**: acha arquivos que nenhuma entrada alcança, arquivos que só os testes usam e exports que ninguém importa. As entradas vêm do `package.json`, do `index.html`, de rotas do Next.js, de config, de testes e de stories.
 - **Exportar e compartilhar**: baixe a visão atual em PNG ou SVG, copie como diagrama Mermaid, baixe o grafo completo de arquivos em JSON ou copie um badge para o README com as contagens de arquivos e ciclos.
 - **Inglês e português**: a interface segue o idioma do navegador, e um seletor troca o idioma. Um idioma novo é um arquivo a mais ([como traduzir](CONTRIBUTING.md#translating-archviewer), em inglês).
 - **Privado por construção**: os arquivos são lidos localmente e analisados na sua máquina. Nenhum arquivo, caminho ou métrica é enviado a lugar algum.
@@ -77,8 +79,6 @@ O deploy de produção está descrito em [docs/deploy.md](docs/deploy.md).
 
 Os próximos passos, mais ou menos nesta ordem:
 
-- **Métricas e heatmap**: colorir os nós por fan-in, fan-out e tamanho para achar pontos críticos
-- **Código morto**: arquivos que ninguém importa e exports sem uso
 - **Comparar versões**: o que mudou na arquitetura entre duas branches
 
 Acompanhe na [issue de roadmap](https://github.com/engviniciusbs/archviewer/issues/8). Ideias são bem-vindas.

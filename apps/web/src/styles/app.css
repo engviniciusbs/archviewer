@@ -188,6 +188,8 @@
   position: relative;
   min-width: 0;
   min-height: 0;
+  /* O canvas só redimensiona no frame seguinte; sem isso ele vaza sobre os painéis da barra de status. */
+  overflow: hidden;
 }
 .panel--detail {
   grid-area: detail;
@@ -628,6 +630,10 @@
 }
 .dead .detail__heading {
   margin-top: var(--space-sm);
+}
+.dead > h3,
+.dead > p {
+  padding: 0 var(--space-md);
 }
 .dead__note {
   margin-top: var(--space-md);

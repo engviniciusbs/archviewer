@@ -265,6 +265,32 @@ impl<'a> Visit<'a> for Collector {
         walk::walk_call_expression(self, it);
     }
 
+    /// `new URL('./w.ts', import.meta.url)`: how bundlers load workers and assets by path.
+    fn visit_new_expression(&mut self, it: &NewExpression<'a>) {
+        if is_ident(&it.callee, "URL") && it.arguments.len() == 2 {
+            let arg = |i: usize| {
+                it.arguments[i]
+                    .as_expression()
+                    .map(|e| e.get_inner_expression())
+            };
+            if let (
+                Some(Expression::StringLiteral(s)),
+                Some(Expression::StaticMemberExpression(m)),
+            ) = (arg(0), arg(1))
+            {
+                let is_import_meta = matches!(&m.object, Expression::ImportMeta(_));
+                if is_import_meta && m.property.name == "url" {
+                    self.push(
+                        s.value.display().to_string().as_str(),
+                        ImportKind::Dynamic,
+                        vec![],
+                    );
+                }
+            }
+        }
+        walk::walk_new_expression(self, it);
+    }
+
     fn visit_assignment_expression(&mut self, it: &AssignmentExpression<'a>) {
         if let Some(name) = commonjs_export(&it.left) {
             self.exports.push(name);
@@ -284,6 +310,14 @@ mod tests {
             .map(|i| (i.specifier, i.kind, i.specifiers))
             .collect()
     }
+    #[test]
+    fn url_with_import_meta_is_a_dynamic_import() {
+        let k = kinds(
+            "const w = new Worker(new URL('./w.ts', import.meta.url), { type: 'module' });              const other = new URL('./x.ts', base); const abs = new URL('https://a.b/c');",
+        );
+        assert_eq!(k, vec![("./w.ts".into(), ImportKind::Dynamic, vec![])]);
+    }
+
     #[test]
     fn static_named_default_namespace() {
         let k = kinds("import {a as b, c} from './x'; import d from './y'; import * as n from './z'; import './w';");
