@@ -81,7 +81,7 @@ Planned next, roughly in this order:
 - **Dead code**: files nobody imports and unused exports
 - **Compare versions**: what changed in the architecture between two branches
 
-Follow progress in the [roadmap issue](https://github.com/engviniciusbs/archviewer/issues?q=is%3Aissue+label%3Aroadmap). Ideas are welcome.
+Follow progress in the [roadmap issue](https://github.com/engviniciusbs/archviewer/issues/8). Ideas are welcome.
 
 ## Contributing
 

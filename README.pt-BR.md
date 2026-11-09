@@ -81,7 +81,7 @@ Os próximos passos, mais ou menos nesta ordem:
 - **Código morto**: arquivos que ninguém importa e exports sem uso
 - **Comparar versões**: o que mudou na arquitetura entre duas branches
 
-Acompanhe na [issue de roadmap](https://github.com/engviniciusbs/archviewer/issues?q=is%3Aissue+label%3Aroadmap). Ideias são bem-vindas.
+Acompanhe na [issue de roadmap](https://github.com/engviniciusbs/archviewer/issues/8). Ideias são bem-vindas.
 
 ## Contribuindo
 
