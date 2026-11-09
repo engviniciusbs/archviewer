@@ -4,6 +4,7 @@ import Sigma from 'sigma';
 import { NodeBorderProgram } from '@sigma/node-border';
 import FA2Layout from 'graphology-layout-forceatlas2/worker';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
+import { registerSceneSource, sceneFromSigma } from '../export/scene';
 import { useGraphStore, useGraphStoreApi } from '../store/graph-store';
 import { renderable } from '../store/selectors';
 import { stopLayout, syncThenLayout } from './layout';
@@ -109,8 +110,14 @@ export function GraphCanvas() {
     });
 
     engineRef.current = { graph, sigma, theme, cache: new PositionCache(), layout: null, timer: null, selected: selectedHolder };
+    // A exportação de imagem lê o que está desenhado agora, com o destaque da seleção.
+    const unregisterScene = registerSceneSource(() => {
+      const sel = selectedHolder.current;
+      return sceneFromSigma(sigma, graph, sel !== null && graph.hasNode(nodeKey(sel)));
+    });
     // O efeito de sincronização abaixo roda logo depois deste e desenha o grafo atual.
     return () => {
+      unregisterScene();
       const e = engineRef.current;
       engineRef.current = null;
       if (e) stopLayout(e, () => undefined);
