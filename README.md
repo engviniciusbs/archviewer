@@ -1,117 +1,92 @@
 # ArchViewer
 
-> Visualizador de arquitetura de software, 100% no navegador
+> See the architecture of any JavaScript/TypeScript project as an interactive graph, right in your browser. Your code never leaves your machine.
 
-O ArchViewer abre a pasta de um projeto JavaScript/TypeScript e mostra a arquitetura dele como um grafo interativo: pastas, arquivos, dependências e imports.
+[![CI](https://github.com/engviniciusbs/archviewer/actions/workflows/core.yml/badge.svg)](https://github.com/engviniciusbs/archviewer/actions/workflows/core.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## Recursos
+**[Try it → archviewer.viniciusbsarmento.com](https://archviewer.viniciusbsarmento.com)** · [Leia em português](README.pt-BR.md)
 
-- **Grafo interativo**: renderizado em WebGL com Sigma e graphology, com grupos que se expandem e se recolhem.
-- **Analisador em WebAssembly**: parsing de AST em Rust (OXC) para extrair imports e exports com precisão, rodando num worker.
-- **Ciclos e pendências**: destaca dependências circulares e lista os imports que não foram resolvidos.
-- **Explorador, busca e detalhes**: árvore de arquivos, busca por nome e caminho, e um painel com fan-in, fan-out, imports e trecho do código.
-- **Privacidade**: o código nunca sai do navegador.
+![ArchViewer showing the dependencies of a file in its own web app](docs/assets/screenshot.png)
 
-## Stack
+Open a project folder and ArchViewer draws its folders, files and imports as a graph you can expand, collapse and search. Nothing to install, no account, no upload.
 
-| Camada | Tecnologia |
-|--------|-----------|
-| Frontend | React 19 + Vite + Sigma (WebGL) |
-| Analisador | Rust + OXC → WebAssembly, em um Web Worker |
-| Testes | Vitest, Playwright e `cargo test` |
-| Monorepo | pnpm workspaces |
+> **Note:** the interface is currently in Portuguese. An English UI is on the [roadmap](#roadmap).
 
-## Primeiros passos
+## Features
 
-### Pré-requisitos
+- **Interactive graph**: WebGL rendering with Sigma.js and graphology. Folders start collapsed and expand on demand, so large projects stay readable.
+- **Precise analysis in WebAssembly**: a Rust core built on [OXC](https://oxc.rs) parses every file's AST and resolves imports the way your toolchain does (`tsconfig` paths and references, `package.json` exports, workspaces). It runs in a Web Worker.
+- **Cycles and loose ends**: circular dependencies are highlighted, and unresolved imports are listed with the reason.
+- **Explorer, search and details**: a file tree, search by name or path, and a detail panel with fan-in, fan-out, imports, dependents and a code snippet.
+- **Monorepo aware**: pnpm and npm/yarn workspaces are detected and shown as packages.
+- **Private by design**: files are read locally and analyzed on your machine. No file, path or metric is sent anywhere.
 
-- [Node.js](https://nodejs.org/) >= 20
-- [pnpm](https://pnpm.io/) >= 9
-- [Rust](https://rustup.rs/) (para compilar o core em Wasm), com o target wasm e a CLI do bindgen:
+## How it works
 
-  ```bash
-  rustup target add wasm32-unknown-unknown
-  cargo install wasm-bindgen-cli --version 0.2.130
-  ```
+```
+your folder ──► ingest (browser) ──► Web Worker ──► archviewer-core (Rust → WASM)
+                 .gitignore,                         parse (OXC), resolve imports,
+                 ignored dirs,                       build graph, find cycles
+                 batched reads                                │
+                                                              ▼
+                              React UI ◄── visible graph, details, search
+                              (Sigma.js / WebGL)
+```
 
-  A versão da CLI precisa ser a mesma do `wasm-bindgen` fixado no `Cargo.lock`; o `pnpm build:wasm` confere isso e mostra o comando de instalação se houver diferença.
+- Code files: `.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, `.cjs`.
+- Skipped: `node_modules`, `dist`, `build`, hidden folders, anything in `.gitignore`, and files over 2 MB.
+- Analysis of a 20,000-file synthetic project is checked in CI.
 
-**Nota para Windows:** compilar Rust exige um linker. Instale as MSVC Build Tools ou use a toolchain GNU (`rustup override set stable-x86_64-pc-windows-gnu`) com o MinGW-w64 no `PATH`.
+## Browser support
 
-### Rodar o app
+| Browser | Folder access | Status |
+|---------|---------------|--------|
+| Chrome / Edge | File System Access API | Full support |
+| Firefox | File picker (`webkitdirectory`) | Works, without direct folder access |
+| Safari | File picker (`webkitdirectory`) | Works, without direct folder access |
+
+## Development
+
+You need Node.js ≥ 20, pnpm ≥ 9 and Rust with the wasm target:
 
 ```bash
-# Clonar
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.130   # must match Cargo.lock
+
 git clone https://github.com/engviniciusbs/archviewer.git
 cd archviewer
-
-# Instalar dependências
 pnpm install
-
-# Compilar o analisador Wasm
 pnpm build:wasm
-
-# Subir o servidor de desenvolvimento
 pnpm --filter @archviewer/web dev
 ```
 
-### Uso
-
-1. Abra o app no Chrome ou no Edge (no Firefox e no Safari, a pasta é escolhida pelo seletor de arquivos).
-2. Clique em "Abrir projeto" e escolha a pasta do seu projeto JS/TS.
-3. Explore o grafo de dependências.
-4. Selecione um nó, no grafo ou no explorador, para ver imports, dependentes e ciclos.
-
-### Testes
-
-```bash
-pnpm --filter @archviewer/web typecheck
-pnpm --filter @archviewer/web lint
-pnpm --filter @archviewer/web test
-
-# Ponta a ponta (compila o app e abre o fixtures/sample-project num navegador real)
-pnpm --filter @archviewer/web exec playwright install chromium
-pnpm --filter @archviewer/web e2e
-```
-
-Sem o Chromium do Playwright, use um navegador instalado: `PW_CHANNEL=msedge pnpm --filter @archviewer/web e2e`.
-
-## Arquitetura
+Tests, project layout and Windows notes are in [CONTRIBUTING.md](CONTRIBUTING.md). Production deployment is described in [docs/deploy.md](docs/deploy.md) (in Portuguese).
 
 ```
 archviewer/
-├── crates/
-│   └── archviewer-core/ # núcleo em Rust: parsing, resolução e grafo
-├── packages/
-│   └── core-wasm/       # wrapper wasm-bindgen em volta do archviewer-core
-├── apps/
-│   └── web/             # aplicação React + Sigma
-└── fixtures/
-    └── sample-project/  # projeto de exemplo para testes
+├── crates/archviewer-core/   # Rust core: parsing, resolution, graph, cycles
+├── packages/core-wasm/       # wasm-bindgen wrapper with a typed JS API
+├── apps/web/                 # React + Vite + Sigma app
+└── fixtures/sample-project/  # sample project used by the tests
 ```
 
-## Suporte de navegadores
+## Roadmap
 
-| Navegador | Acesso a arquivos | Status |
-|-----------|-------------------|--------|
-| Chrome / Edge | File System Access API | Suporte completo |
-| Firefox | Seletor de arquivos (`webkitdirectory`) | Funciona, com o aviso de que não há acesso direto à pasta |
-| Safari | Seletor de arquivos (`webkitdirectory`) | Funciona, com o aviso de que não há acesso direto à pasta |
+Planned next, roughly in this order:
 
-## Privacidade
+- **English interface** (i18n EN/PT, following the browser language)
+- **Export and share**: PNG/SVG, JSON, Mermaid and a README badge
+- **Metrics and heatmap**: color nodes by fan-in, fan-out and size to find hotspots
+- **Dead code**: files nobody imports and unused exports
+- **Compare versions**: what changed in the architecture between two branches
 
-Nada sai do navegador. A pasta é lida localmente, analisada por um worker em WebAssembly na sua máquina, e nenhum arquivo, caminho ou métrica é enviado a servidor algum.
+Follow progress in the [roadmap issue](https://github.com/engviniciusbs/archviewer/issues?q=is%3Aissue+label%3Aroadmap). Ideas are welcome.
 
-## Produção
+## Contributing
 
-O app roda em **https://archviewer.viniciusbsarmento.com**.
+Issues and pull requests are welcome. Look for [`good first issue`](https://github.com/engviniciusbs/archviewer/labels/good%20first%20issue) to get started, and read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR. This project follows a [Code of Conduct](CODE_OF_CONDUCT.md).
 
-- Todo push na `main` dispara o workflow `ci`. Se o job `core` passar (Rust, WASM, testes, typecheck, lint e e2e), o job `deploy` publica o `apps/web/dist` no environment `production`.
-- O app é estático. Na VPS, o nginx serve `/var/www/archviewer/current`, e só o Cloudflare (proxy, SSL strict) chega à origem.
-- O deploy entra como o usuário `archviewer`. A chave dele é restrita, no servidor, ao script [`deploy/archviewer-receive.sh`](deploy/archviewer-receive.sh), instalado em `/usr/local/bin/archviewer-receive`. O script cria uma release nova, troca o link `current` e mantém as 5 últimas.
-- **Rollback:** na VPS, aponte `current` para uma release anterior, por exemplo `ln -sfn /var/www/archviewer/releases/<release> /var/www/archviewer/current`.
-- **Secrets** (environment `production`, liberado só para a `main`): `ARCHVIEWER_DEPLOY_KEY`, `ARCHVIEWER_KNOWN_HOSTS` e a variável `DEPLOY_HOST`.
+## License
 
-## Licença
-
-MIT
+[MIT](LICENSE)

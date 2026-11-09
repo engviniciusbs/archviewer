@@ -1,0 +1,49 @@
+name: Bug report
+description: Something is wrong in the graph, the analysis or the app
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! English or Portuguese are both fine.
+        Please don't paste private code. A minimal sample (file names and import lines) is usually enough.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The project shape matters most. For example, a tsconfig path alias, a workspace package or the import that was not resolved.
+      placeholder: |
+        1. Open a folder with ...
+        2. Expand ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: size
+    attributes:
+      label: Project size
+      description: Roughly how many files? The status bar shows it.
+      placeholder: "e.g. 1,200 files"
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console errors or anything else
